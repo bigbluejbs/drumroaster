@@ -258,16 +258,85 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 // ── Data ──────────────────────────────────────────────────────────────────
+// 피드백 로직 근거:
+// 분쇄도: 수율 낮음(미추출) → 곱게(저항↑ 접촉↑) / 수율 높음(과추출) → 굵게(저항↓ 접촉↓) / 수율 적정 → 유지
+// 추출속도: 분쇄 곱게 하면 속도 자연히 느려지므로 별도 조작 불필요 (유지)
+//           단, 농도(Strong/Weak)만 문제일 때는 물/원두량으로 해결 → 속도 유지
+// strong_under: 미추출+고농도 → 곱게(수율↑) + 느리게(접촉↑) + 물 늘리기(농도↓)
+// strong_bitter: 과추출+고농도 → 굵게(수율↓) + 빠르게(접촉↓) + 물 늘리기(농도↓)
+// weak_under: 미추출+저농도 → 곱게(수율↑) + 느리게(접촉↑) + 원두 늘리기(농도↑)
+// weak_bitter: 과추출+저농도 → 굵게(수율↓) + 빠르게(접촉↓) + 원두 늘리기(농도↑)
 const ZONE_META = {
-  ideal:        { label:'Ideal  이상적',              badge:'b-ideal',  fbGrind:'조정 불필요', fbFlow:'조정 불필요', fbDose:'현재 비율 유지', fbWater:'현재 비율 유지', note:'모든 파라미터가 SCA 이상 구간 내에 있습니다.' },
-  strong_under: { label:'Strong & Underextracted  강함 & 과소추출', badge:'b-strong', fbGrind:'→ 분쇄 곱게 (접촉 저항↑)', fbFlow:'↓ 추출 느리게 (접촉 시간↑)', fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기', note:'농도↑ + 미추출 → 곱게 갈면서 추출 시간 늘리기. 또는 원두 줄이고 물 늘리기.' },
-  strong:       { label:'Strong  강함',               badge:'b-strong', fbGrind:'분쇄도 유지', fbFlow:'추출 시간 유지', fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기', note:'추출수율은 이상적이나 농도 과잉. 물 비율을 늘려 희석.' },
-  strong_bitter:{ label:'Strong & Overextracted  강함 & 과다추출', badge:'b-bitter', fbGrind:'← 분쇄 굵게 (저항↓)', fbFlow:'↑ 추출 빠르게 (시간↓)', fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기', note:'농도↑ + 과추출 → 굵게 갈아 쓴맛 제거, 원두량 줄이기.' },
-  under:        { label:'Underextracted  과소추출',   badge:'b-sour',   fbGrind:'→ 분쇄 곱게', fbFlow:'↓ 추출 느리게', fbDose:'현재 유지', fbWater:'현재 유지', note:'미추출(신맛/떫음) → 분쇄 곱게 하여 접촉 시간 확보. 뜸들이기 연장.' },
-  bitter:       { label:'Overextracted  과다추출',    badge:'b-bitter', fbGrind:'← 분쇄 굵게', fbFlow:'↑ 추출 빠르게', fbDose:'현재 유지', fbWater:'현재 유지', note:'과추출(쓴맛/텁텁함) → 굵게 갈아 접촉 시간 줄이기.' },
-  weak_under:   { label:'Weak & Underextracted  약함 & 과소추출', badge:'b-weak', fbGrind:'→ 분쇄 곱게', fbFlow:'↓ 추출 느리게', fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기', note:'농도↓ + 미추출 → 원두 늘리고 분쇄 곱게. 물 비율 줄이기.' },
-  weak:         { label:'Weak  약함',                 badge:'b-weak',   fbGrind:'분쇄도 유지', fbFlow:'추출 시간 유지', fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기', note:'추출수율은 이상적이나 농도 부족. 원두 비율 늘리기.' },
-  weak_bitter:  { label:'Weak & Overextracted  약함 & 과다추출', badge:'b-bitter', fbGrind:'← 분쇄 굵게', fbFlow:'↑ 추출 빠르게', fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기', note:'농도↓ + 과추출 → 굵게 갈아 추출 단축, 원두 늘리기.' },
+  ideal:        { label:'Ideal  이상적',
+                  badge:'b-ideal',
+                  fbGrind:'유지',
+                  fbFlow:'유지',
+                  fbDose:'현재 비율 유지', fbWater:'현재 비율 유지',
+                  note:'모든 파라미터가 SCA 이상 구간 내에 있습니다.' },
+
+  // 수율 적정, 농도만 높음 → 분쇄·속도 유지, 물만 늘리기
+  strong:       { label:'Strong  강함',
+                  badge:'b-strong',
+                  fbGrind:'유지',
+                  fbFlow:'유지',
+                  fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기',
+                  note:'추출수율은 적정. 농도만 높음 → 물 비율 늘려 희석. 분쇄도·속도 건드리지 않기.' },
+
+  // 수율 적정, 농도만 낮음 → 분쇄·속도 유지, 원두만 늘리기
+  weak:         { label:'Weak  약함',
+                  badge:'b-weak',
+                  fbGrind:'유지',
+                  fbFlow:'유지',
+                  fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기',
+                  note:'추출수율은 적정. 농도만 낮음 → 원두 비율 늘리기. 분쇄도·속도 건드리지 않기.' },
+
+  // 수율 낮음, 농도 적정 → 곱게(수율↑), 속도 자연히 느려짐(유지)
+  under:        { label:'Underextracted  과소추출',
+                  badge:'b-sour',
+                  fbGrind:'→ 분쇄 곱게',
+                  fbFlow:'유지 (분쇄 곱게 하면 자동으로 느려짐)',
+                  fbDose:'현재 유지', fbWater:'현재 유지',
+                  note:'미추출(신맛/떫음). 분쇄 곱게 → 저항 증가 → 수율 자동 상승. 추출속도는 별도 조작 불필요.' },
+
+  // 수율 높음, 농도 적정 → 굵게(수율↓), 속도 자연히 빨라짐(유지)
+  bitter:       { label:'Overextracted  과다추출',
+                  badge:'b-bitter',
+                  fbGrind:'← 분쇄 굵게',
+                  fbFlow:'유지 (분쇄 굵게 하면 자동으로 빨라짐)',
+                  fbDose:'현재 유지', fbWater:'현재 유지',
+                  note:'과추출(쓴맛/텁텁함). 분쇄 굵게 → 저항 감소 → 수율 자동 하락. 추출속도는 별도 조작 불필요.' },
+
+  // 수율 낮음 + 농도 높음 → 곱게(수율↑) + 느리게(접촉↑) + 물 늘리기(농도↓)
+  strong_under: { label:'Strong & Underextracted  강함 & 과소추출',
+                  badge:'b-strong',
+                  fbGrind:'→ 분쇄 곱게',
+                  fbFlow:'↓ 추출 느리게 (뜸들이기 연장)',
+                  fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기',
+                  note:'미추출+고농도. 곱게 갈아 수율↑, 물 늘려 농도↓. 두 방향 동시 조정 필요.' },
+
+  // 수율 높음 + 농도 높음 → 굵게(수율↓) + 빠르게(접촉↓) + 물 늘리기(농도↓)
+  strong_bitter:{ label:'Strong & Overextracted  강함 & 과다추출',
+                  badge:'b-bitter',
+                  fbGrind:'← 분쇄 굵게',
+                  fbFlow:'↑ 추출 빠르게 (시간 단축)',
+                  fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기',
+                  note:'과추출+고농도. 굵게 갈아 수율↓, 물 늘려 농도↓. 두 방향 동시 조정 필요.' },
+
+  // 수율 낮음 + 농도 낮음 → 곱게(수율↑) + 느리게(접촉↑) + 원두 늘리기(농도↑)
+  weak_under:   { label:'Weak & Underextracted  약함 & 과소추출',
+                  badge:'b-weak',
+                  fbGrind:'→ 분쇄 곱게',
+                  fbFlow:'↓ 추출 느리게 (뜸들이기 연장)',
+                  fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기',
+                  note:'미추출+저농도. 곱게 갈아 수율↑, 원두 늘려 농도↑. 두 방향 동시 조정 필요.' },
+
+  // 수율 높음 + 농도 낮음 → 굵게(수율↓) + 빠르게(접촉↓) + 원두 늘리기(농도↑)
+  weak_bitter:  { label:'Weak & Overextracted  약함 & 과다추출',
+                  badge:'b-bitter',
+                  fbGrind:'← 분쇄 굵게',
+                  fbFlow:'↑ 추출 빠르게 (시간 단축)',
+                  fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기',
+                  note:'과추출+저농도. 굵게 갈아 수율↓, 원두 늘려 농도↑. 두 방향 동시 조정 필요.' },
 };
 
 const SCA_ZONES = [
@@ -282,10 +351,24 @@ const SCA_ZONES = [
   { k:'weak_bitter',  x1:22, x2:26, y1:0.90, y2:1.15 },
 ];
 
+// 매트릭스 좌표: col 0=굵게, 1=최적, 2=곱게 / row 0=빠름(top), 1=최적(mid), 2=느림(bottom)
+// - under: 분쇄 굵음(col0) + 속도 최적(row1) → 곱게만 이동, 속도 그대로
+// - bitter: 분쇄 곱음(col2) + 속도 최적(row1) → 굵게만 이동, 속도 그대로
+// - strong/weak: 분쇄 최적(col1) + 속도 최적(row1) → 농도만 문제, 이동 없음
+// - strong_under: 분쇄 굵음(col0) + 속도 빠름(row0) → 곱게+느리게 동시 이동
+// - strong_bitter: 분쇄 곱음(col2) + 속도 빠름(row0) → 굵게+빠르게(유지)... 실은 고농도라 물로 해결
+// - weak_under: 분쇄 굵음(col0) + 속도 느림(row2) → 곱게+느리게 동시 이동
+// - weak_bitter: 분쇄 곱음(col2) + 속도 느림(row2) → 굵게+빠르게 동시 이동
 const GRIND_POS = {
-  strong_under:{gx:0,gy:3}, strong:{gx:2,gy:3}, strong_bitter:{gx:4,gy:3},
-  under:       {gx:0,gy:2}, ideal: {gx:2,gy:2}, bitter:       {gx:4,gy:2},
-  weak_under:  {gx:0,gy:1}, weak:  {gx:2,gy:1}, weak_bitter:  {gx:4,gy:1},
+  strong_under: {gx:0, gy:0},   // 굵게+빠름
+  strong:       {gx:2, gy:1},   // 최적+최적 (분쇄·속도 이미 최적, 농도만 문제)
+  strong_bitter:{gx:4, gy:0},   // 곱게+빠름
+  under:        {gx:0, gy:2},   // 굵게+최적속도 (속도행 유지)
+  ideal:        {gx:2, gy:2},   // 최적+최적
+  bitter:       {gx:4, gy:2},   // 곱게+최적속도 (속도행 유지)
+  weak_under:   {gx:0, gy:4},   // 굵게+느림
+  weak:         {gx:2, gy:3},   // 최적+최적 (분쇄·속도 이미 최적, 농도만 문제)
+  weak_bitter:  {gx:4, gy:4},   // 곱게+느림
 };
 const GRIND_RECTS = [
   {k:'strong_under', gx1:-0.5,gx2:0.5,gy1:2.5,gy2:3.5},
@@ -543,11 +626,28 @@ function buildGrind(s) {
   const GH = 330;
   const CW = GW / 3, CH = GH / 3;
 
-  const CELLS = [
+  // 3×3 고정 배경 셀 (레이아웃용)
+  const GRID_CELLS = [
     {k:'strong_under', col:0,row:0},{k:'strong',       col:1,row:0},{k:'strong_bitter',col:2,row:0},
     {k:'under',        col:0,row:1},{k:'ideal',        col:1,row:1},{k:'bitter',        col:2,row:1},
     {k:'weak_under',   col:0,row:2},{k:'weak',         col:1,row:2},{k:'weak_bitter',   col:2,row:2},
   ];
+
+  // 점(dot) 위치: 실제 분쇄도×속도 축 의미에 맞게 독립 좌표
+  // col: 0=굵게, 1=최적, 2=곱게 / row: 0=빠름, 1=최적, 2=느림
+  // under/bitter → 속도 최적(row1)에서 분쇄도만 이동
+  // strong/weak  → 분쇄·속도 최적(col1,row1), 비율만 조정
+  const DOT_POS = {
+    strong_under:  {col:0, row:0},   // 굵게 + 빠름
+    strong:        {col:1, row:1},   // 최적 + 최적 (비율만 문제)
+    strong_bitter: {col:2, row:0},   // 곱게 + 빠름
+    under:         {col:0, row:1},   // 굵게 + 속도최적 → 곱게로만 이동
+    ideal:         {col:1, row:1},   // 최적 + 최적
+    bitter:        {col:2, row:1},   // 곱게 + 속도최적 → 굵게로만 이동
+    weak_under:    {col:0, row:2},   // 굵게 + 느림
+    weak:          {col:1, row:1},   // 최적 + 최적 (비율만 문제)
+    weak_bitter:   {col:2, row:2},   // 곱게 + 느림
+  };
   const CELL_LABELS = {
     strong_under: ['Strong &','Underextracted'], strong: ['Strong','강함'], strong_bitter: ['Strong &','Overextracted'],
     under:        ['Underextracted','과소추출'],  ideal:  ['Ideal','이상적'], bitter:        ['Overextracted','과다추출'],
@@ -567,18 +667,20 @@ function buildGrind(s) {
     weak_bitter:  {fill:'rgba(180,50,50,',  stroke:'#b43030'},
   };
 
+  // 셀 중심 픽셀 좌표 반환 (col: 0~2, row: 0~2)
   function cx(col){ return PAD_L + col*CW + CW/2; }
   function cy(row){ return PAD_T + row*CH + CH/2; }
   function lx(col){ return PAD_L + col*CW; }
   function ty(row){ return PAD_T + row*CH; }
 
-  const curCell  = CELLS.find(c=>c.k===s.zKey);
-  const idealC   = CELLS.find(c=>c.k==='ideal');
-  const curX=cx(curCell.col), curY=cy(curCell.row);
-  const idX =cx(idealC.col),  idY =cy(idealC.row);
+  // 점 위치: DOT_POS 기준
+  const curDot  = DOT_POS[s.zKey];
+  const idealDot2 = DOT_POS['ideal'];
+  const curX = cx(curDot.col),    curY = cy(curDot.row);
+  const idX  = cx(idealDot2.col), idY  = cy(idealDot2.row);
 
-  // ── cells ──
-  const cellsSVG = CELLS.map(c=>{
+  // ── cells (3×3 고정 배경 그리드) ──
+  const cellsSVG = GRID_CELLS.map(c=>{
     const isCur   = c.k === s.zKey;
     const isIdeal = c.k === 'ideal';
     const cfg = ZONE_CFG[c.k];
@@ -750,16 +852,5 @@ function render() {
 );
 render();
 </script>
-<script>
-function sendHeight() {
-  var h = Math.max(
-    document.body.scrollHeight,
-    document.documentElement.scrollHeight
-  );
-  window.parent.postMessage({ iframeHeight: h }, '*');
-}
-window.addEventListener('load', sendHeight);
-window.addEventListener('resize', sendHeight);
-setInterval(sendHeight, 500);
-</script></body>
+</body>
 </html>
