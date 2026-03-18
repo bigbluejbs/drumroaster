@@ -238,7 +238,7 @@ body {
       <div class="chart-wrap"><canvas id="scaC"></canvas></div>
     </div>
     <div class="chart-panel">
-      <div class="chart-panel-title">분쇄도 × 추출속도 — 조정 매트릭스</div>
+      <div class="chart-panel-title">분쇄도 × 원두비율 — 조정 매트릭스</div>
       <div id="grindMatrix" style="width:100%;"></div>
     </div>
   </div>
@@ -258,14 +258,9 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 // ── Data ──────────────────────────────────────────────────────────────────
-// 피드백 로직 근거:
-// 분쇄도: 수율 낮음(미추출) → 곱게(저항↑ 접촉↑) / 수율 높음(과추출) → 굵게(저항↓ 접촉↓) / 수율 적정 → 유지
-// 추출속도: 분쇄 곱게 하면 속도 자연히 느려지므로 별도 조작 불필요 (유지)
-//           단, 농도(Strong/Weak)만 문제일 때는 물/원두량으로 해결 → 속도 유지
-// strong_under: 미추출+고농도 → 곱게(수율↑) + 느리게(접촉↑) + 물 늘리기(농도↓)
-// strong_bitter: 과추출+고농도 → 굵게(수율↓) + 빠르게(접촉↓) + 물 늘리기(농도↓)
-// weak_under: 미추출+저농도 → 곱게(수율↑) + 느리게(접촉↑) + 원두 늘리기(농도↑)
-// weak_bitter: 과추출+저농도 → 굵게(수율↓) + 빠르게(접촉↓) + 원두 늘리기(농도↑)
+// 두 축의 의미:
+// 가로(X) = 분쇄도 → 수율(Extraction) 결정: 굵게=수율↓ / 곱게=수율↑
+// 세로(Y) = 원두:물 비율 → 농도(Strength) 결정: 원두많음=농도↑ / 원두적음=농도↓
 const ZONE_META = {
   ideal:        { label:'Ideal  이상적',
                   badge:'b-ideal',
@@ -274,69 +269,61 @@ const ZONE_META = {
                   fbDose:'현재 비율 유지', fbWater:'현재 비율 유지',
                   note:'모든 파라미터가 SCA 이상 구간 내에 있습니다.' },
 
-  // 수율 적정, 농도만 높음 → 분쇄·속도 유지, 물만 늘리기
   strong:       { label:'Strong  강함',
                   badge:'b-strong',
                   fbGrind:'유지',
-                  fbFlow:'유지',
+                  fbFlow:'원두 줄이기 (농도↓)',
                   fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기',
-                  note:'추출수율은 적정. 농도만 높음 → 물 비율 늘려 희석. 분쇄도·속도 건드리지 않기.' },
+                  note:'수율은 적정. 농도만 높음 → 원두 줄이거나 물 늘리기. 분쇄도는 건드리지 않기.' },
 
-  // 수율 적정, 농도만 낮음 → 분쇄·속도 유지, 원두만 늘리기
   weak:         { label:'Weak  약함',
                   badge:'b-weak',
                   fbGrind:'유지',
-                  fbFlow:'유지',
+                  fbFlow:'원두 늘리기 (농도↑)',
                   fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기',
-                  note:'추출수율은 적정. 농도만 낮음 → 원두 비율 늘리기. 분쇄도·속도 건드리지 않기.' },
+                  note:'수율은 적정. 농도만 낮음 → 원두 늘리거나 물 줄이기. 분쇄도는 건드리지 않기.' },
 
-  // 수율 낮음, 농도 적정 → 곱게(수율↑), 속도 자연히 느려짐(유지)
   under:        { label:'Underextracted  과소추출',
                   badge:'b-sour',
-                  fbGrind:'→ 분쇄 곱게',
-                  fbFlow:'유지 (분쇄 곱게 하면 자동으로 느려짐)',
+                  fbGrind:'→ 분쇄 곱게 (수율↑)',
+                  fbFlow:'유지',
                   fbDose:'현재 유지', fbWater:'현재 유지',
-                  note:'미추출(신맛/떫음). 분쇄 곱게 → 저항 증가 → 수율 자동 상승. 추출속도는 별도 조작 불필요.' },
+                  note:'미추출(신맛/떫음). 분쇄 곱게 → 저항↑ → 수율 상승. 원두:물 비율은 그대로.' },
 
-  // 수율 높음, 농도 적정 → 굵게(수율↓), 속도 자연히 빨라짐(유지)
   bitter:       { label:'Overextracted  과다추출',
                   badge:'b-bitter',
-                  fbGrind:'← 분쇄 굵게',
-                  fbFlow:'유지 (분쇄 굵게 하면 자동으로 빨라짐)',
+                  fbGrind:'← 분쇄 굵게 (수율↓)',
+                  fbFlow:'유지',
                   fbDose:'현재 유지', fbWater:'현재 유지',
-                  note:'과추출(쓴맛/텁텁함). 분쇄 굵게 → 저항 감소 → 수율 자동 하락. 추출속도는 별도 조작 불필요.' },
+                  note:'과추출(쓴맛/텁텁함). 분쇄 굵게 → 저항↓ → 수율 하락. 원두:물 비율은 그대로.' },
 
-  // 수율 낮음 + 농도 높음 → 곱게(수율↑) + 느리게(접촉↑) + 물 늘리기(농도↓)
   strong_under: { label:'Strong & Underextracted  강함 & 과소추출',
                   badge:'b-strong',
-                  fbGrind:'→ 분쇄 곱게',
-                  fbFlow:'↓ 추출 느리게 (뜸들이기 연장)',
+                  fbGrind:'→ 분쇄 곱게 (수율↑)',
+                  fbFlow:'원두 줄이기 (농도↓)',
                   fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기',
-                  note:'미추출+고농도. 곱게 갈아 수율↑, 물 늘려 농도↓. 두 방향 동시 조정 필요.' },
+                  note:'미추출+고농도. 분쇄 곱게(수율↑) + 원두 줄이기(농도↓). 두 방향 동시 조정.' },
 
-  // 수율 높음 + 농도 높음 → 굵게(수율↓) + 빠르게(접촉↓) + 물 늘리기(농도↓)
   strong_bitter:{ label:'Strong & Overextracted  강함 & 과다추출',
                   badge:'b-bitter',
-                  fbGrind:'← 분쇄 굵게',
-                  fbFlow:'↑ 추출 빠르게 (시간 단축)',
+                  fbGrind:'← 분쇄 굵게 (수율↓)',
+                  fbFlow:'원두 줄이기 (농도↓)',
                   fbDose:'원두 양 줄이기', fbWater:'물 양 늘리기',
-                  note:'과추출+고농도. 굵게 갈아 수율↓, 물 늘려 농도↓. 두 방향 동시 조정 필요.' },
+                  note:'과추출+고농도. 분쇄 굵게(수율↓) + 원두 줄이기(농도↓). 두 방향 동시 조정.' },
 
-  // 수율 낮음 + 농도 낮음 → 곱게(수율↑) + 느리게(접촉↑) + 원두 늘리기(농도↑)
   weak_under:   { label:'Weak & Underextracted  약함 & 과소추출',
                   badge:'b-weak',
-                  fbGrind:'→ 분쇄 곱게',
-                  fbFlow:'↓ 추출 느리게 (뜸들이기 연장)',
+                  fbGrind:'→ 분쇄 곱게 (수율↑)',
+                  fbFlow:'원두 늘리기 (농도↑)',
                   fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기',
-                  note:'미추출+저농도. 곱게 갈아 수율↑, 원두 늘려 농도↑. 두 방향 동시 조정 필요.' },
+                  note:'미추출+저농도. 분쇄 곱게(수율↑) + 원두 늘리기(농도↑). 두 방향 동시 조정.' },
 
-  // 수율 높음 + 농도 낮음 → 굵게(수율↓) + 빠르게(접촉↓) + 원두 늘리기(농도↑)
   weak_bitter:  { label:'Weak & Overextracted  약함 & 과다추출',
                   badge:'b-bitter',
-                  fbGrind:'← 분쇄 굵게',
-                  fbFlow:'↑ 추출 빠르게 (시간 단축)',
+                  fbGrind:'← 분쇄 굵게 (수율↓)',
+                  fbFlow:'원두 늘리기 (농도↑)',
                   fbDose:'원두 양 늘리기', fbWater:'물 양 줄이기',
-                  note:'과추출+저농도. 굵게 갈아 수율↓, 원두 늘려 농도↑. 두 방향 동시 조정 필요.' },
+                  note:'과추출+저농도. 분쇄 굵게(수율↓) + 원두 늘리기(농도↑). 두 방향 동시 조정.' },
 };
 
 const SCA_ZONES = [
@@ -762,15 +749,15 @@ function buildGrind(s) {
   const yAxisSVG = `
     <g transform="translate(11,${yMidY}) rotate(-90)">
       <text x="0" y="0" text-anchor="middle" font-size="11" font-weight="600"
-        fill="#3a3835" font-family="${font}">추출속도 — Flow Rate</text>
+        fill="#3a3835" font-family="${font}">원두 비율 — Dose Ratio</text>
     </g>
     <line x1="${PAD_L-1}" y1="${PAD_T}" x2="${PAD_L-1}" y2="${PAD_T+GH}" stroke="#d0cec8" stroke-width="0.8"/>
     <text x="${PAD_L-18}" y="${ty(0)+CH/2+4}" text-anchor="middle" font-size="10" font-weight="500"
-      fill="#5a5854" font-family="${font}">빠름</text>
+      fill="#5a5854" font-family="${font}">많음</text>
     <text x="${PAD_L-18}" y="${ty(1)+CH/2+4}" text-anchor="middle" font-size="10" font-weight="500"
       fill="#5a5854" font-family="${font}">최적</text>
     <text x="${PAD_L-18}" y="${ty(2)+CH/2+4}" text-anchor="middle" font-size="10" font-weight="500"
-      fill="#5a5854" font-family="${font}">느림</text>
+      fill="#5a5854" font-family="${font}">적음</text>
     <text x="${PAD_L-4}" y="${PAD_T+10}" text-anchor="middle" font-size="13"
       fill="#aaa9a4" font-family="${font}">↑</text>
     <text x="${PAD_L-4}" y="${PAD_T+GH}" text-anchor="middle" font-size="13"
@@ -809,7 +796,7 @@ function buildGrind(s) {
       <text x="${PAD_L+10}" y="${BOT+14}" font-size="9" fill="#b43030" font-family="${font}" font-weight="500">분쇄도</text>
       <text x="${PAD_L+10}" y="${BOT+28}" font-size="11" fill="#1a1917" font-family="${font}" font-weight="600">${grindRaw}</text>
       <line x1="${PAD_L+GW/2}" y1="${BOT+6}" x2="${PAD_L+GW/2}" y2="${BOT+46}" stroke="rgba(226,75,74,0.2)" stroke-width="1"/>
-      <text x="${PAD_L+GW/2+10}" y="${BOT+14}" font-size="9" fill="#b43030" font-family="${font}" font-weight="500">추출속도</text>
+      <text x="${PAD_L+GW/2+10}" y="${BOT+14}" font-size="9" fill="#b43030" font-family="${font}" font-weight="500">원두 비율</text>
       <text x="${PAD_L+GW/2+10}" y="${BOT+28}" font-size="11" fill="#1a1917" font-family="${font}" font-weight="600">${flowRaw}</text>
       <text x="${PAD_L+GW/2}" y="${BOT+44}" text-anchor="middle" font-size="8.5" fill="#b08888" font-family="${font}">${zm.note.replace(/&/g,'&amp;').substring(0,40)}…</text>`;
   }
@@ -830,7 +817,7 @@ function updateFeedback(s) {
   const zm = ZONE_META[s.zKey];
   document.getElementById('fb-grid').innerHTML = `
     <div class="fb-item"><strong>분쇄도 조정</strong>${zm.fbGrind}</div>
-    <div class="fb-item"><strong>추출속도 / 시간</strong>${zm.fbFlow}</div>
+    <div class="fb-item"><strong>원두 비율 조정</strong>${zm.fbFlow}</div>
     <div class="fb-item"><strong>원두 도즈</strong>${zm.fbDose}</div>
     <div class="fb-item"><strong>물 양</strong>${zm.fbWater}</div>
     <div class="fb-note"><strong>핵심 전략</strong>  ${zm.note}</div>
