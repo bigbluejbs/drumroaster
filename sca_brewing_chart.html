@@ -379,12 +379,16 @@ function buildSCA(s){
     data:[{x:17,y:1.10},{x:23,y:1.10},{x:23,y:1.50},{x:17,y:1.50},{x:17,y:1.10}],
     showLine:true,fill:false,borderColor:'rgba(135,185,220,0.6)',borderWidth:1,borderDash:[4,3],pointRadius:0,order:14});
 
-  const rTDS=(s.dose/s.water)*20;
-  ds.push({type:'scatter',label:'레시피',data:[{x:20,y:+rTDS.toFixed(3)}],
+  // 레시피 기준점: 현재 비율선 위, 수율 20% 지점 (비율선 공식: TDS = ext / ratio)
+  const idealExt = 20;
+  const rTDS = idealExt / s.ratio / 100;  // = dose/water * 0.20
+  const rTDSfmt = +rTDS.toFixed(4);
+  ds.push({type:'scatter',label:'레시피',data:[{x:idealExt, y:rTDSfmt}],
     backgroundColor:'#3d6b2f',borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
 
+  // 화살표 목표점도 동일한 비율선 위 수율 20% 지점
   if(s.hT&&zKey!=='ideal') ds.push({type:'scatter',label:'_arr',
-    data:[{x:s.ext,y:s.tRaw},{x:20,y:1.30}],
+    data:[{x:s.ext,y:s.tRaw},{x:idealExt,y:rTDSfmt}],
     showLine:true,fill:false,borderColor:'rgba(226,75,74,0.5)',borderWidth:1.5,borderDash:[5,3],pointRadius:0,order:4});
   if(s.hT) ds.push({type:'scatter',label:'내 커피',
     data:[{x:+s.ext.toFixed(2),y:s.tRaw}],
@@ -401,7 +405,7 @@ function buildSCA(s){
       },
       plugins:{legend:{display:false},tooltip:{filter:i=>!i.dataset.label.startsWith('_'),callbacks:{label:ctx=>{
         if(ctx.dataset.label==='내 커피') return `TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`;
-        if(ctx.dataset.label==='레시피') return '레시피 기준점'; return null;
+        if(ctx.dataset.label==='레시피') return `레시피 기준 — TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`; return null;
       }}}}
     },
     plugins:[{id:'sL',afterDraw(chart){
@@ -484,14 +488,16 @@ function buildUCD(s){
       borderColor:el.color+'0.85)',borderWidth:1.8,borderDash:el.dash,pointRadius:0,order:10});
   });
 
-  // ── Recipe dot ──
-  const rTDS=(s.dose/s.water)*20;
-  ds.push({type:'scatter',label:'레시피',data:[{x:20,y:+rTDS.toFixed(3)}],
+  // ── Recipe dot: 현재 비율선 위, 수율 20% 지점 ──
+  const ucdIdealExt = 20;
+  const ucdRTDS = ucdIdealExt / s.ratio / 100;
+  const ucdRTDSfmt = +ucdRTDS.toFixed(4);
+  ds.push({type:'scatter',label:'레시피',data:[{x:ucdIdealExt, y:ucdRTDSfmt}],
     backgroundColor:'#3d6b2f',borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
 
   // ── Arrow & my coffee dot ──
   if(s.hT&&zKey!=='classic') ds.push({type:'scatter',label:'_arr',
-    data:[{x:s.ext,y:s.tRaw},{x:20,y:1.25}],
+    data:[{x:s.ext,y:s.tRaw},{x:ucdIdealExt,y:ucdRTDSfmt}],
     showLine:true,fill:false,borderColor:'rgba(226,75,74,0.55)',borderWidth:1.5,borderDash:[5,3],pointRadius:0,order:4});
   if(s.hT) ds.push({type:'scatter',label:'내 커피',
     data:[{x:+s.ext.toFixed(2),y:s.tRaw}],
@@ -509,7 +515,7 @@ function buildUCD(s){
       },
       plugins:{legend:{display:false},tooltip:{filter:i=>!i.dataset.label.startsWith('_'),callbacks:{label:ctx=>{
         if(ctx.dataset.label==='내 커피') return `TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`;
-        if(ctx.dataset.label==='레시피') return '레시피 기준점'; return null;
+        if(ctx.dataset.label==='레시피') return `레시피 기준 — TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`; return null;
       }}}}
     },
     plugins:[{
@@ -586,30 +592,29 @@ function buildUCD(s){
         // ── Layer 3: 소비자 선호 타원 라벨 ──
         ctx.save();
         ctx.font=`500 8px ${font}`;
+        ctx.textAlign='center';
+
+        // 뱃지 그리기 헬퍼 (roundRect 사용 안 함 — 브라우저 호환성 문제)
+        const drawBadge=(px,py,label,bgColor,textColor)=>{
+          const tw=ctx.measureText(label).width;
+          const pw=tw+16, ph=14, bx=px-pw/2, by=py-10;
+          ctx.fillStyle=bgColor;
+          ctx.fillRect(bx,by,pw,ph);
+          ctx.fillStyle=textColor;
+          ctx.fillText(label,px,py+1);
+        };
+
         // Consumers I 라벨
         const ci_px=x.getPixelForValue(19.5), ci_py=y.getPixelForValue(1.08);
-        ctx.fillStyle='rgba(180,50,50,0.85)';
-        ctx.textAlign='center';
-        // 노란 배경 뱃지
-        ctx.fillStyle='rgba(255,240,60,0.92)';
-        ctx.roundRect(ci_px-28,ci_py-9,56,14,3);
-        ctx.fill();
-        ctx.fillStyle='rgba(140,30,30,1)';
-        ctx.fillText('Consumers I',ci_px,ci_py+1);
+        drawBadge(ci_px,ci_py,'Consumers I','rgba(255,235,235,0.92)','rgba(160,30,30,1)');
 
-        // Consumers II 라벨 — 좌
+        // Consumers II 라벨 — 좌 (산미파)
         const c2l_px=x.getPixelForValue(16.5), c2l_py=y.getPixelForValue(1.23);
-        ctx.fillStyle='rgba(255,240,60,0.92)';
-        ctx.beginPath();ctx.roundRect(c2l_px-30,c2l_py-9,60,14,3);ctx.fill();
-        ctx.fillStyle='rgba(30,60,160,1)';
-        ctx.fillText('Consumers II',c2l_px,c2l_py+1);
+        drawBadge(c2l_px,c2l_py,'Consumers II','rgba(235,245,235,0.92)','rgba(20,100,50,1)');
 
-        // Consumers II 라벨 — 우
+        // Consumers II 라벨 — 우 (다크파)
         const c2r_px=x.getPixelForValue(24.5), c2r_py=y.getPixelForValue(1.23);
-        ctx.fillStyle='rgba(255,240,60,0.92)';
-        ctx.beginPath();ctx.roundRect(c2r_px-30,c2r_py-9,60,14,3);ctx.fill();
-        ctx.fillStyle='rgba(30,60,160,1)';
-        ctx.fillText('Consumers II',c2r_px,c2r_py+1);
+        drawBadge(c2r_px,c2r_py,'Consumers II','rgba(235,240,255,0.92)','rgba(30,60,160,1)');
 
         // ── Brew Ratio 상단 축 라벨 ──
         ctx.font=`400 7.5px ${font}`;ctx.fillStyle='rgba(160,110,50,0.80)';ctx.textAlign='center';
