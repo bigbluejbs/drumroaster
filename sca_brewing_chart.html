@@ -398,13 +398,24 @@ function render(){
   // badges + ext
   if(s.hT){
     const sm=SCA_META[s.scaZ], um=UCD_META[s.ucdZ];
-    document.getElementById('sca-badge').innerHTML=`<span class="badge ${sm.badge}">SCA: ${sm.label}</span>`;
-    document.getElementById('ucd-badge').innerHTML=`<span class="badge ${um.badge}">UCD: ${um.label}</span>`;
-    document.getElementById('ext-val').textContent=`수율 ${s.ext.toFixed(1)}%`;
+    const outOfRange = s.ext!==null && (s.ext < 13 || s.ext > 27);
+    const extText = outOfRange
+      ? `<span style="color:#b43030;font-weight:500;">수율 ${s.ext.toFixed(1)}% — 차트 범위 밖 (Rbrew=${s.Rbrew.toFixed(1)} g/g이 너무 진함)</span>`
+      : `수율 ${s.ext.toFixed(1)}%`;
+
+    document.getElementById('sca-badge').innerHTML = outOfRange
+      ? `<span class="badge" style="background:#fbeaea;color:#8a2020;">⚠ 수율 ${s.ext.toFixed(1)}% — 차트 범위(14~26%) 밖</span>`
+      : `<span class="badge ${sm.badge}">SCA: ${sm.label}</span>`;
+    document.getElementById('ucd-badge').innerHTML = outOfRange
+      ? ''
+      : `<span class="badge ${um.badge}">UCD: ${um.label}</span>`;
+    document.getElementById('ext-val').innerHTML = outOfRange
+      ? `<span style="font-size:0.7rem;color:#b43030;">원두 비율(1:${s.Rbrew.toFixed(1)})이 너무 진해서 드립 브루잉 범위를 벗어났습니다. 물을 늘리거나 원두를 줄여주세요.</span>`
+      : `<span style="font-size:0.72rem;color:var(--mid);">수율 ${s.ext.toFixed(1)}%</span>`;
   } else {
     document.getElementById('sca-badge').innerHTML='';
     document.getElementById('ucd-badge').innerHTML='';
-    document.getElementById('ext-val').textContent='';
+    document.getElementById('ext-val').innerHTML='';
   }
 
   buildSCA(s);
@@ -440,21 +451,21 @@ function buildSCA(s){
     showLine:true,fill:false,borderColor:'rgba(135,185,220,0.6)',borderWidth:1,borderDash:[4,3],pointRadius:0,order:14});
 
   // 레시피 기준점: 동일한 비율선(Rbrew) 위 수율 PE=20% 지점
-  // 논문 역공식: PE = TDS/(1-TDS) × (Rbrew - Rabs)
-  // → TDS = PE / (PE + (Rbrew - Rabs)) × 100
   const idealExt = 20;
   const peDecimal = idealExt / 100;
   const rTDSfmt = +((peDecimal / (peDecimal + (s.Rbrew - s.RABS))) * 100).toFixed(4);
+  const SCA_TARGET_EXT = idealExt, SCA_TARGET_TDS = rTDSfmt;
 
+  // 레시피 기준점은 항상 표시 (PE=20%는 항상 차트 범위 내)
   ds.push({type:'scatter',label:'레시피',data:[{x:idealExt, y:rTDSfmt}],
     backgroundColor:'#3d6b2f',borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
 
-  // 화살표: 내 커피 → 같은 비율선 위 PE=20%
-  const SCA_TARGET_EXT = idealExt, SCA_TARGET_TDS = rTDSfmt;
-  if(s.hT&&zKey!=='ideal') ds.push({type:'scatter',label:'_arr',
+  // 내 커피 + 화살표: 수율이 차트 범위(13~27%) 안일 때만 표시
+  const inRange = s.hT && s.ext >= 13 && s.ext <= 27;
+  if(inRange && zKey!=='ideal') ds.push({type:'scatter',label:'_arr',
     data:[{x:s.ext,y:s.tRaw},{x:SCA_TARGET_EXT,y:SCA_TARGET_TDS}],
     showLine:true,fill:false,borderColor:'rgba(226,75,74,0.5)',borderWidth:1.5,borderDash:[5,3],pointRadius:0,order:4});
-  if(s.hT) ds.push({type:'scatter',label:'내 커피',
+  if(inRange) ds.push({type:'scatter',label:'내 커피',
     data:[{x:+s.ext.toFixed(2),y:s.tRaw}],
     backgroundColor:'#e24b4a',borderColor:'#fff',borderWidth:2.5,pointRadius:10,pointHoverRadius:12,order:0});
 
@@ -488,8 +499,8 @@ function buildSCA(s){
       ctx.save();ctx.font='400 7.5px '+font;ctx.fillStyle='rgba(135,185,220,0.8)';ctx.textAlign='left';
       RATIOS.forEach(r=>{const te=(1/r)*26.5;if(te<0.90||te>1.81)return;ctx.fillText('1:'+r,x.getPixelForValue(26.5)+3,y.getPixelForValue(te)+3);});
       ctx.restore();
-      // 화살촉
-      if(s.hT && zKey!=='ideal'){
+      // 화살촉 — 범위 안일 때만
+      if(s.hT && zKey!=='ideal' && s.ext>=13 && s.ext<=27){
         const x1=x.getPixelForValue(s.ext), y1=y.getPixelForValue(s.tRaw);
         const x2=x.getPixelForValue(SCA_TARGET_EXT), y2=y.getPixelForValue(SCA_TARGET_TDS);
         const dx=x2-x1, dy=y2-y1, dist=Math.sqrt(dx*dx+dy*dy);
@@ -506,6 +517,21 @@ function buildSCA(s){
           ctx.fillStyle='rgba(226,75,74,0.85)'; ctx.fill();
           ctx.restore();
         }
+      }
+      // 범위 밖 경고
+      if(s.hT && (s.ext<13 || s.ext>27)){
+        const cx=(x.getPixelForValue(13)+x.getPixelForValue(27))/2;
+        const cy=(y.getPixelForValue(0.88)+y.getPixelForValue(1.82))/2;
+        ctx.save();
+        ctx.textAlign='center';
+        ctx.font=`500 11px ${font}`;
+        ctx.fillStyle='rgba(180,40,40,0.80)';
+        ctx.fillText(`수율 ${s.ext.toFixed(1)}% — 차트 범위 밖`, cx, cy-10);
+        ctx.font=`400 9px ${font}`;
+        ctx.fillStyle='rgba(120,80,40,0.70)';
+        ctx.fillText(`비율 1:${s.Rbrew.toFixed(1)} (g/g)이 너무 진합니다`, cx, cy+8);
+        ctx.fillText(`물을 늘리거나 원두를 줄여주세요`, cx, cy+24);
+        ctx.restore();
       }
     }}]
   });
@@ -757,8 +783,10 @@ function buildUCD(s){
   const UCD_TARGET_EXT = UCD_IDEAL_EXT;
   const UCD_TARGET_TDS = UCD_RTDS;
 
-  // ── 화살표: 내 커피 → 같은 비율선 위 수율 20% ──
-  if(s.hT && zKey!=='classic'){
+  // ── 화살표 + 내 커피: 수율이 차트 범위(13~27%) 안일 때만 표시 ──
+  const ucdInRange = s.hT && s.ext >= 13 && s.ext <= 27;
+
+  if(ucdInRange && zKey!=='classic'){
     const x1=px(s.ext), y1=py(s.tRaw);
     const x2=px(UCD_TARGET_EXT), y2=py(UCD_TARGET_TDS);
     const dx=x2-x1, dy=y2-y1, dist=Math.sqrt(dx*dx+dy*dy);
@@ -789,8 +817,8 @@ function buildUCD(s){
     ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
   }
 
-  // ── 내 커피 점 (빨강, 맨 위) ──
-  if(s.hT){
+  // ── 내 커피 점: 범위 안일 때만 ──
+  if(ucdInRange){
     const mx=px(s.ext), my=py(s.tRaw);
     ctx.beginPath();
     ctx.arc(mx, my, 15, 0, Math.PI*2);
@@ -799,6 +827,20 @@ function buildUCD(s){
     ctx.arc(mx, my, 10, 0, Math.PI*2);
     ctx.fillStyle='#e24b4a'; ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
+  }
+
+  // ── 범위 밖 경고 텍스트 ──
+  if(s.hT && !ucdInRange){
+    ctx.save();
+    ctx.textAlign='center';
+    ctx.font=`500 11px 'Noto Sans KR',sans-serif`;
+    ctx.fillStyle='rgba(180,40,40,0.80)';
+    ctx.fillText(`수율 ${s.ext.toFixed(1)}% — 차트 범위 밖`, PL+CW/2, PT+CH/2-10);
+    ctx.font=`400 9px 'Noto Sans KR',sans-serif`;
+    ctx.fillStyle='rgba(120,80,40,0.70)';
+    ctx.fillText(`현재 비율 1:${s.Rbrew.toFixed(1)} (g/g)이 너무 진합니다`, PL+CW/2, PT+CH/2+8);
+    ctx.fillText(`물을 늘리거나 원두를 줄여주세요`, PL+CW/2, PT+CH/2+24);
+    ctx.restore();
   }
 
   ctx.restore(); // clip 해제
@@ -838,11 +880,50 @@ function buildUCD(s){
 }
 
 function buildFeedback(s){
+  const outOfRange = s.hT && (s.ext < 13 || s.ext > 27);
+
+  // ── 범위 밖: 레시피 조정 안내로 대체 ──
+  if(outOfRange){
+    const tooLow = s.ext < 13; // 수율 너무 낮음 = 비율이 너무 진함
+    const currentRbrew = s.Rbrew.toFixed(1);
+    // 목표 Rbrew: 드립 적정 범위 중간 (수율 18~20% 나오도록)
+    // PE=19%, TDS=s.tRaw → Rbrew = PE/(TDS/(1-TDS)) + 2.1
+    const tdsD = (s.tRaw||1.25)/100;
+    const targetRbrew = (19/100) / (tdsD/(1-tdsD)) + 2.1;
+    const targetWater = (targetRbrew * s.dose).toFixed(0);
+
+    const outHtml=`
+      <div style="grid-column:1/-1;background:#fef3f2;border:1px solid rgba(180,40,40,0.2);
+        border-radius:8px;padding:0.75rem 0.9rem;font-size:0.73rem;line-height:1.7;">
+        <div style="font-weight:500;color:#8a2020;margin-bottom:0.4rem;">
+          ⚠ 수율 ${s.ext.toFixed(1)}% — 드립 브루잉 차트 범위(14~26%) 밖
+        </div>
+        <div style="color:var(--mid);margin-bottom:0.5rem;">
+          현재 비율 <strong>1:${currentRbrew}</strong> (g/g)은 드립 브루잉 적정 범위보다 
+          <strong>${tooLow ? '너무 진합니다' : '너무 묽습니다'}</strong>.
+          이 비율에서는 TDS가 아무리 높아도 수율이 차트 범위에 들어오지 않아요.
+        </div>
+        <div style="border-top:1px solid rgba(180,40,40,0.15);padding-top:0.5rem;color:var(--text);font-weight:500;">
+          💡 조정 제안 — 물 ${tooLow?'늘리기':'줄이기'}
+        </div>
+        <div style="color:var(--mid);margin-top:0.2rem;">
+          원두 ${s.dose}g 기준으로 적정 수율(약 19%)을 얻으려면<br>
+          물을 약 <strong>${targetWater}ml</strong> (비율 1:${targetRbrew.toFixed(1)})로 조정해보세요.
+        </div>
+      </div>`;
+
+    document.getElementById('sca-fb').innerHTML = outHtml;
+    document.getElementById('ucd-fb').innerHTML = outHtml;
+    return;
+  }
+
+  // ── 정상 범위: 기존 피드백 ──
   const sm=SCA_META[s.scaZ||'ideal'], um=UCD_META[s.ucdZ||'classic'];
   document.getElementById('sca-fb').innerHTML=`
     <div class="fb-item"><strong>분쇄도</strong>${sm.fbG}</div>
     <div class="fb-item"><strong>원두 비율</strong>${sm.fbD}</div>
     <div class="fb-note"><strong>전략</strong>  ${sm.note}</div>`;
+
   // UC Davis 피드백 — 소비자 3유형 + 근처 플레이버
   let flavorNote='';
   if(s.hT){
@@ -891,6 +972,15 @@ function buildDiffNote(s){
     el.innerHTML=`<strong style="color:var(--text);font-weight:500;">두 기준의 차이 — Guinard et al., 2023 (UC Davis)</strong><br>
       TDS를 입력하면 SCA(1950년대)와 UC Davis 2023 기준에서 각각 어떻게 판정하는지 비교합니다.<br>
       <span style="font-size:0.68rem;color:var(--muted);">PE 계산: 논문 정확 공식 PE = TDS/(1-TDS) × (Rbrew - 2.1) 적용 · Rbrew = 물/원두 (g/g) · Rabs = 2.1</span>`;
+    return;
+  }
+
+  // 범위 밖이면 diff note도 간단히
+  if(s.ext < 13 || s.ext > 27){
+    el.innerHTML=`<strong style="color:#8a2020;font-weight:500;">⚠ 두 기준 비교 불가 — 수율 ${s.ext.toFixed(1)}%가 차트 범위(14~26%) 밖입니다</strong><br>
+      <span style="font-size:0.72rem;color:var(--mid);">
+        현재 Rbrew = ${s.Rbrew.toFixed(1)} g/g. 드립 브루잉 적정 비율(1:13~1:18)로 조정한 뒤 다시 측정해주세요.
+      </span>`;
     return;
   }
   const sKey=s.scaZ, uKey=s.ucdZ;
