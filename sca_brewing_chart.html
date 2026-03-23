@@ -17,26 +17,46 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
 .hdr h1{font-family:'DM Serif Display',serif;font-size:1.5rem;font-weight:400;letter-spacing:-0.01em;}
 .hdr p{font-size:0.72rem;color:var(--muted);margin-top:0.2rem;}
 
-/* Shared inputs */
-.inputs{display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:1rem;align-items:flex-end;
-  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;}
+/* Input section enhanced */
+.input-section{margin-bottom:1rem;}
+.step-label{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.45rem;}
+.step-badge{display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:0.62rem;font-weight:500;flex-shrink:0;}
+.step-title{font-size:0.75rem;font-weight:500;color:var(--text);}
+.step-desc{font-size:0.65rem;color:var(--muted);margin-left:auto;}
+
+.inputs{display:flex;flex-wrap:wrap;gap:0.6rem;align-items:flex-end;
+  background:var(--surface);
+  border:2px solid var(--accent);
+  border-radius:10px;padding:0.85rem 1rem;
+  box-shadow:0 0 0 3px rgba(61,107,47,0.08);}
 .cg{display:flex;flex-direction:column;gap:0.25rem;}
-.cg label{font-size:0.63rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;}
-.cg input{padding:0.4rem 0.62rem;border:1px solid var(--bm);border-radius:6px;
-  background:var(--bg);color:var(--text);font-family:inherit;font-size:0.82rem;width:105px;outline:none;}
-.cg input:focus{border-color:var(--accent);}
-.cg .un{font-size:0.6rem;color:var(--muted);margin-top:0.08rem;}
+.cg label{font-size:0.65rem;font-weight:500;color:var(--accent);letter-spacing:0.05em;text-transform:uppercase;}
+.cg input{padding:0.45rem 0.7rem;
+  border:1.5px solid var(--bm);border-radius:7px;
+  background:#fff;color:var(--text);font-family:inherit;
+  font-size:0.9rem;font-weight:500;width:105px;outline:none;
+  transition:border-color 0.15s, box-shadow 0.15s;}
+.cg input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(61,107,47,0.12);}
+.cg .un{font-size:0.62rem;color:var(--muted);margin-top:0.1rem;}
 .cdiv{width:1px;height:44px;background:var(--border);align-self:flex-end;margin:0 0.15rem 0.22rem;}
 
-/* TDS row */
+/* TDS row enhanced */
 .tds-row{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;
-  padding:0.6rem 1rem;background:var(--surface);border:1px solid var(--border);
-  border-radius:8px;margin-bottom:1rem;}
-.tds-lbl{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;}
-.tds-row input{padding:0.38rem 0.6rem;border:1px solid var(--bm);border-radius:6px;
-  background:var(--bg);color:var(--text);font-family:inherit;font-size:0.82rem;width:85px;outline:none;}
-.tds-row input:focus{border-color:var(--accent);}
-.tds-unit{font-size:0.65rem;color:var(--muted);}
+  padding:0.7rem 1rem;background:var(--surface);
+  border:2px solid #e07020;
+  border-radius:8px;margin-bottom:1rem;
+  box-shadow:0 0 0 3px rgba(224,112,32,0.08);}
+.tds-lbl{font-size:0.72rem;font-weight:500;color:#b05010;text-transform:uppercase;
+  letter-spacing:0.06em;white-space:nowrap;}
+.tds-row input{padding:0.42rem 0.65rem;
+  border:1.5px solid #d08030;border-radius:7px;
+  background:#fff;color:var(--text);font-family:inherit;
+  font-size:0.9rem;font-weight:500;width:90px;outline:none;
+  transition:border-color 0.15s, box-shadow 0.15s;}
+.tds-row input:focus{border-color:#e07020;box-shadow:0 0 0 3px rgba(224,112,32,0.12);}
+.tds-unit{font-size:0.68rem;color:#b05010;font-weight:500;}
 .badges{display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;}
 .badge{padding:0.2rem 0.55rem;border-radius:4px;font-size:0.68rem;font-weight:500;white-space:nowrap;}
 .b-ideal{background:#eaf3de;color:#2d5a1f;} .b-strong{background:#fdf0d8;color:#7a4a0a;}
@@ -100,25 +120,41 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
   <p>원두·물 설정 → TDS 입력 → SCA(전통) · UC Davis 2025(최신) 두 기준 동시 비교</p>
 </div>
 
-<!-- 공통 입력 -->
-<div class="inputs">
-  <div class="cg"><label>원두</label><input type="number" id="dose" value="15" min="1" max="100" step="0.5"><div class="un">g</div></div>
-  <div class="cg"><label>물</label><input type="number" id="water" value="250" min="50" max="2000" step="5"><div class="un">ml</div></div>
-  <div class="cg"><label>추출 용량</label><input type="number" id="brew" placeholder="= 물량" min="10" max="2000" step="5"><div class="un">ml (비우면 물량)</div></div>
+<!-- STEP 1: 레시피 설정 -->
+<div class="input-section">
+  <div class="step-label">
+    <span class="step-badge">1</span>
+    <span class="step-title">레시피 설정 — 원두와 물의 양을 입력하세요</span>
+    <span class="step-desc">추출 용량은 드립 손실 있을 때만 입력</span>
+  </div>
+  <div class="inputs">
+    <div class="cg"><label>원두</label><input type="number" id="dose" value="15" min="1" max="100" step="0.5"><div class="un">g</div></div>
+    <div class="cg"><label>물</label><input type="number" id="water" value="250" min="50" max="2000" step="5"><div class="un">ml</div></div>
+    <div class="cdiv"></div>
+    <div class="cg"><label>추출 용량 <span style="font-weight:400;color:var(--muted);">(선택)</span></label><input type="number" id="brew" placeholder="= 물량" min="10" max="2000" step="5"><div class="un">ml — 비우면 물량으로 계산</div></div>
+  </div>
+</div>
+
+<!-- STEP 2: TDS 입력 -->
+<div class="input-section">
+  <div class="step-label">
+    <span class="step-badge" style="background:#e07020;">2</span>
+    <span class="step-title">TDS 측정값 입력 — 추출 후 TDS 미터로 측정한 값을 입력하세요</span>
+    <span class="step-desc">측정 전 상온 냉각 권장</span>
+  </div>
+  <div class="tds-row">
+    <span class="tds-lbl">TDS 측정값</span>
+    <input type="number" id="tds" placeholder="예: 1.25" min="0.3" max="3" step="0.01">
+    <span class="tds-unit">%</span>
+    <div class="badges">
+      <div id="sca-badge"></div>
+      <div id="ucd-badge"></div>
+    </div>
+    <div id="ext-val" class="ext-val"></div>
+  </div>
 </div>
 
 <div class="metrics-row" id="metrics"></div>
-
-<div class="tds-row">
-  <span class="tds-lbl">TDS</span>
-  <input type="number" id="tds" placeholder="예: 1.25" min="0.3" max="3" step="0.01">
-  <span class="tds-unit">%</span>
-  <div class="badges">
-    <div id="sca-badge"></div>
-    <div id="ucd-badge"></div>
-  </div>
-  <div id="ext-val" class="ext-val"></div>
-</div>
 
 <!-- 나란히 비교 -->
 <div class="compare-row">
