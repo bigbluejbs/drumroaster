@@ -147,7 +147,9 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
     </div>
     <div class="chart-card">
       <div class="card-title">Flavor Zone · Brew Ratio</div>
-      <div class="chart-wrap"><canvas id="ucdC"></canvas></div>
+      <div class="chart-wrap" style="position:relative;">
+        <canvas id="ucdC" style="width:100%;height:100%;display:block;"></canvas>
+      </div>
     </div>
     <div class="fb-card">
       <div class="fb-head">UC Davis 조정 가이드</div>
@@ -308,7 +310,7 @@ const UCD_RATIOS=[11,12,13,14,15,16,17,18];
 // ──────────────────────────────────────────────
 // STATE & RENDER
 // ──────────────────────────────────────────────
-let scaChart=null, ucdChart=null;
+let scaChart=null;
 const font="'Noto Sans KR',sans-serif";
 
 function getState(){
@@ -379,16 +381,18 @@ function buildSCA(s){
     data:[{x:17,y:1.10},{x:23,y:1.10},{x:23,y:1.50},{x:17,y:1.50},{x:17,y:1.10}],
     showLine:true,fill:false,borderColor:'rgba(135,185,220,0.6)',borderWidth:1,borderDash:[4,3],pointRadius:0,order:14});
 
-  // 레시피 기준점: 현재 비율선 위, 수율 20% 지점 (비율선 공식: TDS = ext / ratio)
+  // 레시피 기준점 + 화살표 목표: 동일한 비율선 위 수율 20% 지점
+  // TDS(%) = (dose_g / brew_vol_ml) × extraction(%)
   const idealExt = 20;
-  const rTDS = idealExt / s.ratio / 100;  // = dose/water * 0.20
-  const rTDSfmt = +rTDS.toFixed(4);
+  const rTDSfmt = +(s.dose / s.bVol * idealExt).toFixed(4);
+
   ds.push({type:'scatter',label:'레시피',data:[{x:idealExt, y:rTDSfmt}],
     backgroundColor:'#3d6b2f',borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
 
-  // 화살표 목표점도 동일한 비율선 위 수율 20% 지점
+  // 화살표: 내 커피 → 같은 비율선 위 수율 20%
+  const SCA_TARGET_EXT = idealExt, SCA_TARGET_TDS = rTDSfmt;
   if(s.hT&&zKey!=='ideal') ds.push({type:'scatter',label:'_arr',
-    data:[{x:s.ext,y:s.tRaw},{x:idealExt,y:rTDSfmt}],
+    data:[{x:s.ext,y:s.tRaw},{x:SCA_TARGET_EXT,y:SCA_TARGET_TDS}],
     showLine:true,fill:false,borderColor:'rgba(226,75,74,0.5)',borderWidth:1.5,borderDash:[5,3],pointRadius:0,order:4});
   if(s.hT) ds.push({type:'scatter',label:'내 커피',
     data:[{x:+s.ext.toFixed(2),y:s.tRaw}],
@@ -396,7 +400,7 @@ function buildSCA(s){
 
   scaChart=new Chart(document.getElementById('scaC').getContext('2d'),{
     type:'scatter',data:{datasets:ds},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},layout:{padding:{right:28}},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},layout:{padding:{right:36,top:4}},
       scales:{
         x:{title:{display:true,text:'추출수율 Extraction Yield (%)',color:tx,font:{size:9,family:font}},
            min:13,max:27,grid:{color:gc},ticks:{color:ax,stepSize:1,font:{size:8},callback:v=>v+'%'}},
@@ -420,9 +424,29 @@ function buildSCA(s){
         lb.t.split('\n').forEach((l,i,ar)=>ctx.fillText(l,x.getPixelForValue(lb.ex),y.getPixelForValue(lb.td)+(i-(ar.length-1)/2)*11));
         ctx.restore();
       });
+      // 비율선 라벨
       ctx.save();ctx.font='400 7.5px '+font;ctx.fillStyle='rgba(135,185,220,0.8)';ctx.textAlign='left';
       RATIOS.forEach(r=>{const te=(1/r)*26.5;if(te<0.90||te>1.81)return;ctx.fillText('1:'+r,x.getPixelForValue(26.5)+3,y.getPixelForValue(te)+3);});
       ctx.restore();
+      // 화살촉
+      if(s.hT && zKey!=='ideal'){
+        const x1=x.getPixelForValue(s.ext), y1=y.getPixelForValue(s.tRaw);
+        const x2=x.getPixelForValue(SCA_TARGET_EXT), y2=y.getPixelForValue(SCA_TARGET_TDS);
+        const dx=x2-x1, dy=y2-y1, dist=Math.sqrt(dx*dx+dy*dy);
+        if(dist>20){
+          const sh=14;
+          const ax2=x2-dx/dist*sh, ay2=y2-dy/dist*sh;
+          const angle=Math.atan2(dy, dx);
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(ax2,ay2);
+          ctx.lineTo(ax2-11*Math.cos(angle-0.38), ay2-11*Math.sin(angle-0.38));
+          ctx.lineTo(ax2-11*Math.cos(angle+0.38), ay2-11*Math.sin(angle+0.38));
+          ctx.closePath();
+          ctx.fillStyle='rgba(226,75,74,0.85)'; ctx.fill();
+          ctx.restore();
+        }
+      }
     }}]
   });
 }
@@ -464,174 +488,288 @@ const CONSUMER_ELLIPSES=[
 ];
 
 function buildUCD(s){
-  if(ucdChart){ucdChart.destroy();ucdChart=null;}
-  const ds=[], zKey=s.ucdZ||'classic';
-  const gc='rgba(0,0,0,0.04)', ax='#9a9690', tx='#7a7870';
+  const canvas = document.getElementById('ucdC');
+  const wrap = canvas.parentElement;
+  // 캔버스 크기를 컨테이너에 맞춤
+  const W = wrap.clientWidth || 420;
+  const H = wrap.clientHeight || 380;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
 
-  // ── Brew ratio lines ──
-  UCD_RATIOS.forEach(r=>ds.push({type:'scatter',label:'_br',data:ucdRatioLine(r),
-    showLine:true,fill:false,borderColor:'rgba(180,140,80,0.35)',borderWidth:0.9,pointRadius:0,order:18}));
+  // ── 레이아웃 상수 ──
+  const PL=46, PR=38, PT=12, PB=30;
+  const CW=W-PL-PR, CH=H-PT-PB;
+  const XMIN=13, XMAX=27, YMIN=0.78, YMAX=1.62;
 
-  // ── Classic Standard border ──
-  ds.push({type:'scatter',label:'_cs',
-    data:[{x:18,y:1.15},{x:22,y:1.15},{x:22,y:1.35},{x:18,y:1.35},{x:18,y:1.15}],
-    showLine:true,fill:false,borderColor:'rgba(40,100,40,0.75)',borderWidth:1.5,borderDash:[3,3],pointRadius:0,order:15});
+  function px(x){ return PL + (x-XMIN)/(XMAX-XMIN)*CW; }
+  function py(y){ return PT + (YMAX-y)/(YMAX-YMIN)*CH; }
 
-  // ── Consumer ellipses as scatter lines ──
-  CONSUMER_ELLIPSES.forEach((el,ei)=>{
-    const pts=[];
-    for(let a=0;a<=360;a+=3){
-      const rad=a*Math.PI/180;
-      pts.push({x:el.cx+el.rx*Math.cos(rad), y:el.cy+el.ry*Math.sin(rad)});
+  const zKey = s.ucdZ||'classic';
+
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(PL,PT,CW,CH);
+  ctx.clip();
+
+  // ── 배경: 4코너 색상 바이리니어 보간 (원본 이미지 정밀 재현) ──
+  // 원본: 좌상=주황핑크, 우상=연두, 좌하=보라라벤더, 우하=청하늘, 중앙=연회색
+  // 방법: 오프스크린 캔버스에 픽셀별 보간 후 메인 캔버스에 그림
+  const offC = document.createElement('canvas');
+  offC.width = Math.ceil(CW); offC.height = Math.ceil(CH);
+  const offCtx = offC.getContext('2d');
+  const imgData = offCtx.createImageData(offC.width, offC.height);
+  const d = imgData.data;
+
+  // 4코너 RGB (원본 색상 정밀 매칭)
+  const TL = [248, 155, 110]; // 좌상: 주황-핑크
+  const TR = [155, 215, 155]; // 우상: 연두-초록
+  const BL = [195, 155, 225]; // 좌하: 보라-라벤더
+  const BR = [120, 195, 230]; // 우하: 청록-하늘
+
+  for(let row=0; row<offC.height; row++){
+    for(let col=0; col<offC.width; col++){
+      const tx = col/offC.width;   // 0=left, 1=right
+      const ty = row/offC.height;  // 0=top, 1=bottom
+
+      // 바이리니어 보간
+      const r = Math.round(TL[0]*(1-tx)*(1-ty) + TR[0]*tx*(1-ty) + BL[0]*(1-tx)*ty + BR[0]*tx*ty);
+      const g = Math.round(TL[1]*(1-tx)*(1-ty) + TR[1]*tx*(1-ty) + BL[1]*(1-tx)*ty + BR[1]*tx*ty);
+      const b = Math.round(TL[2]*(1-tx)*(1-ty) + TR[2]*tx*(1-ty) + BL[2]*(1-tx)*ty + BR[2]*tx*ty);
+
+      const i = (row*offC.width + col)*4;
+      d[i]=r; d[i+1]=g; d[i+2]=b; d[i+3]=220; // alpha: 약간 투명
     }
-    ds.push({type:'scatter',label:'_el'+ei,data:pts,showLine:true,fill:false,
-      borderColor:el.color+'0.85)',borderWidth:1.8,borderDash:el.dash,pointRadius:0,order:10});
+  }
+  offCtx.putImageData(imgData, 0, 0);
+
+  // 중앙 Classic Standard 구역을 연회색으로 살짝 밝게
+  const classicGrad = ctx.createRadialGradient(
+    px(20), py(1.25), 0,
+    px(20), py(1.25), (px(22)-px(18))*0.8
+  );
+  classicGrad.addColorStop(0, 'rgba(235,235,230,0.50)');
+  classicGrad.addColorStop(1, 'rgba(235,235,230,0)');
+
+  ctx.drawImage(offC, PL, PT);
+  ctx.fillStyle = classicGrad;
+  ctx.fillRect(PL, PT, CW, CH);
+
+  // ── 현재 구역 강조 테두리 ──
+  const UZONES=[
+    {k:'sour_citrus', x1:14,x2:18,y1:1.35,y2:1.60},
+    {k:'thick',       x1:18,x2:22,y1:1.35,y2:1.60},
+    {k:'bitter_roast',x1:22,x2:26,y1:1.35,y2:1.60},
+    {k:'sour_mid',    x1:14,x2:18,y1:1.15,y2:1.35},
+    {k:'classic',     x1:18,x2:22,y1:1.15,y2:1.35},
+    {k:'bitter_mid',  x1:22,x2:26,y1:1.15,y2:1.35},
+    {k:'sweet',       x1:14,x2:18,y1:0.78,y2:1.15},
+    {k:'thin',        x1:18,x2:22,y1:0.78,y2:1.15},
+    {k:'tea_like',    x1:22,x2:26,y1:0.78,y2:1.15},
+  ];
+
+  const activeZone = UZONES.find(z=>z.k===zKey);
+  if(activeZone){
+    const az=activeZone;
+    ctx.strokeStyle='rgba(0,0,0,0.30)';
+    ctx.lineWidth=2.5;
+    ctx.setLineDash([]);
+    ctx.strokeRect(
+      px(az.x1)+1, py(az.y2)+1,
+      px(az.x2)-px(az.x1)-2,
+      py(az.y1)-py(az.y2)-2
+    );
+
+    // 현재 구역 살짝 밝게 오버레이
+    ctx.fillStyle='rgba(255,255,255,0.18)';
+    ctx.fillRect(px(az.x1), py(az.y2), px(az.x2)-px(az.x1), py(az.y1)-py(az.y2));
+  }
+
+  // ── 그리드 ──
+  ctx.strokeStyle='rgba(0,0,0,0.06)';
+  ctx.lineWidth=0.5;
+  for(let xv=14;xv<=26;xv++){
+    ctx.beginPath(); ctx.moveTo(px(xv),PT); ctx.lineTo(px(xv),PT+CH); ctx.stroke();
+  }
+  for(let yv=0.8;yv<=1.62;yv+=0.1){
+    const yvR=Math.round(yv*10)/10;
+    ctx.beginPath(); ctx.moveTo(PL,py(yvR)); ctx.lineTo(PL+CW,py(yvR)); ctx.stroke();
+  }
+
+  // ── 대각선 비율선 ──
+  const URATIOS=[11,12,13,14,15,16,17,18];
+  ctx.strokeStyle='rgba(160,120,60,0.28)';
+  ctx.lineWidth=0.8;
+  URATIOS.forEach(r=>{
+    ctx.beginPath();
+    let first=true;
+    for(let ex=13;ex<=27;ex+=0.5){
+      const tds=ex/r/100;
+      if(tds<YMIN||tds>YMAX){ first=true; continue; }
+      if(first){ ctx.moveTo(px(ex),py(tds)); first=false; }
+      else ctx.lineTo(px(ex),py(tds));
+    }
+    ctx.stroke();
   });
 
-  // ── Recipe dot: 현재 비율선 위, 수율 20% 지점 ──
-  const ucdIdealExt = 20;
-  const ucdRTDS = ucdIdealExt / s.ratio / 100;
-  const ucdRTDSfmt = +ucdRTDS.toFixed(4);
-  ds.push({type:'scatter',label:'레시피',data:[{x:ucdIdealExt, y:ucdRTDSfmt}],
-    backgroundColor:'#3d6b2f',borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
+  // ── Classic Standard 점선 테두리 ──
+  ctx.strokeStyle='rgba(40,120,40,0.85)';
+  ctx.lineWidth=1.8;
+  ctx.setLineDash([4,3]);
+  ctx.strokeRect(px(18),py(1.35), px(22)-px(18), py(1.15)-py(1.35));
+  ctx.setLineDash([]);
 
-  // ── Arrow & my coffee dot ──
-  if(s.hT&&zKey!=='classic') ds.push({type:'scatter',label:'_arr',
-    data:[{x:s.ext,y:s.tRaw},{x:ucdIdealExt,y:ucdRTDSfmt}],
-    showLine:true,fill:false,borderColor:'rgba(226,75,74,0.55)',borderWidth:1.5,borderDash:[5,3],pointRadius:0,order:4});
-  if(s.hT) ds.push({type:'scatter',label:'내 커피',
-    data:[{x:+s.ext.toFixed(2),y:s.tRaw}],
-    backgroundColor:'#e24b4a',borderColor:'#fff',borderWidth:2.5,pointRadius:10,pointHoverRadius:12,order:0});
-
-  ucdChart=new Chart(document.getElementById('ucdC').getContext('2d'),{
-    type:'scatter',data:{datasets:ds},
-    options:{responsive:true,maintainAspectRatio:false,animation:{duration:200},
-      layout:{padding:{right:30, top:18}},
-      scales:{
-        x:{title:{display:true,text:'Percent Extraction (%)',color:tx,font:{size:9,family:font}},
-           min:13,max:27,grid:{color:gc},ticks:{color:ax,stepSize:1,font:{size:8},callback:v=>v+'%'}},
-        y:{title:{display:true,text:'Total Dissolved Solids (%)',color:tx,font:{size:9,family:font}},
-           min:0.78,max:1.62,grid:{color:gc},ticks:{color:ax,stepSize:0.1,font:{size:8},callback:v=>v.toFixed(1)+'%'}}
-      },
-      plugins:{legend:{display:false},tooltip:{filter:i=>!i.dataset.label.startsWith('_'),callbacks:{label:ctx=>{
-        if(ctx.dataset.label==='내 커피') return `TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`;
-        if(ctx.dataset.label==='레시피') return `레시피 기준 — TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`; return null;
-      }}}}
-    },
-    plugins:[{
-      id:'ucdFull',
-      // Layer 1: 그라데이션 배경을 beforeDraw에서 그림
-      beforeDraw(chart){
-        const {ctx,chartArea:{left,top,right,bottom},scales:{x,y}}=chart;
-        if(!left) return;
-        ctx.save();
-        // 배경 전체 크림색
-        ctx.fillStyle='rgba(255,248,235,1)';
-        ctx.fillRect(left,top,right-left,bottom-top);
-
-        // 방사형 그라데이션 — 각 코너/영역별 색상
-        const addRadial=(cx,cy,r,c0,c1)=>{
-          const px=x.getPixelForValue(cx), py=y.getPixelForValue(cy);
-          const g=ctx.createRadialGradient(px,py,0,px,py,r);
-          g.addColorStop(0,c0); g.addColorStop(1,c1);
-          ctx.fillStyle=g;
-          ctx.fillRect(left,top,right-left,bottom-top);
-        };
-        // 좌상단: 산미/신맛 — 노랑-연두
-        addRadial(14.5,1.55,220,'rgba(220,240,100,0.38)','rgba(220,240,100,0)');
-        // 우상단: 쓴맛 — 파랑
-        addRadial(26,1.55,200,'rgba(80,120,220,0.28)','rgba(80,120,220,0)');
-        // 중상단: Astringent — 보라
-        addRadial(20,1.52,160,'rgba(150,120,200,0.22)','rgba(150,120,200,0)');
-        // 좌중단: Citrus — 주황-노랑
-        addRadial(14.5,1.42,160,'rgba(240,180,50,0.30)','rgba(240,180,50,0)');
-        // 좌하단: Sweet — 핑크
-        addRadial(14,0.85,200,'rgba(220,100,140,0.30)','rgba(220,100,140,0)');
-        // 우하단: Black Tea — 청록
-        addRadial(26,0.82,200,'rgba(60,140,180,0.25)','rgba(60,140,180,0)');
-        // 중앙: Classic — 연한 초록
-        addRadial(20,1.25,120,'rgba(120,200,140,0.22)','rgba(120,200,140,0)');
-        // Berry — 자홍 (좌중)
-        addRadial(14.5,1.33,100,'rgba(200,60,110,0.18)','rgba(200,60,110,0)');
-
-        // 대각선 줄무늬 (이미지의 해칭 패턴)
-        ctx.strokeStyle='rgba(180,140,80,0.12)';
-        ctx.lineWidth=0.6;
-        for(let i=-300;i<600;i+=12){
-          ctx.beginPath();
-          ctx.moveTo(left+i,top);
-          ctx.lineTo(left+i+(bottom-top),bottom);
-          ctx.stroke();
-        }
-        ctx.restore();
-      },
-      afterDraw(chart){
-        const {ctx,scales:{x,y}}=chart;
-
-        // ── Layer 2: 플레이버 단어 ──
-        FLAVOR_WORDS.forEach(fw=>{
-          const px=x.getPixelForValue(fw.ex), py=y.getPixelForValue(fw.td);
-          if(px<chart.chartArea.left||px>chart.chartArea.right) return;
-          if(py<chart.chartArea.top||py>chart.chartArea.bottom) return;
-          ctx.save();
-          ctx.textAlign='center';
-          ctx.font=`${fw.fw} ${fw.fs}px ${font}`;
-          // 현재 내 커피 위치 근처면 더 밝게
-          let alpha=0.75;
-          if(s.hT){
-            const dx=s.ext-fw.ex, dy=s.tRaw-fw.td;
-            const dist=Math.sqrt(dx*dx+dy*dy*100);
-            if(dist<2) alpha=1.0;
-          }
-          ctx.globalAlpha=alpha;
-          ctx.fillStyle=fw.c;
-          ctx.fillText(fw.t,px,py);
-          ctx.restore();
-        });
-
-        // ── Layer 3: 소비자 선호 타원 라벨 ──
-        ctx.save();
-        ctx.font=`500 8px ${font}`;
-        ctx.textAlign='center';
-
-        // 뱃지 그리기 헬퍼 (roundRect 사용 안 함 — 브라우저 호환성 문제)
-        const drawBadge=(px,py,label,bgColor,textColor)=>{
-          const tw=ctx.measureText(label).width;
-          const pw=tw+16, ph=14, bx=px-pw/2, by=py-10;
-          ctx.fillStyle=bgColor;
-          ctx.fillRect(bx,by,pw,ph);
-          ctx.fillStyle=textColor;
-          ctx.fillText(label,px,py+1);
-        };
-
-        // Consumers I 라벨
-        const ci_px=x.getPixelForValue(19.5), ci_py=y.getPixelForValue(1.08);
-        drawBadge(ci_px,ci_py,'Consumers I','rgba(255,235,235,0.92)','rgba(160,30,30,1)');
-
-        // Consumers II 라벨 — 좌 (산미파)
-        const c2l_px=x.getPixelForValue(16.5), c2l_py=y.getPixelForValue(1.23);
-        drawBadge(c2l_px,c2l_py,'Consumers II','rgba(235,245,235,0.92)','rgba(20,100,50,1)');
-
-        // Consumers II 라벨 — 우 (다크파)
-        const c2r_px=x.getPixelForValue(24.5), c2r_py=y.getPixelForValue(1.23);
-        drawBadge(c2r_px,c2r_py,'Consumers II','rgba(235,240,255,0.92)','rgba(30,60,160,1)');
-
-        // ── Brew Ratio 상단 축 라벨 ──
-        ctx.font=`400 7.5px ${font}`;ctx.fillStyle='rgba(160,110,50,0.80)';ctx.textAlign='center';
-        UCD_RATIOS.forEach(r=>{
-          const tdsAt=26/r/100;
-          if(tdsAt<0.79||tdsAt>1.61) return;
-          ctx.fillText(r+'g/L',x.getPixelForValue(26.2)+4,y.getPixelForValue(tdsAt)+3);
-        });
-        ctx.restore();
-      }
-    }]
+  // ── 소비자 타원 ──
+  const ELLIPSES=[
+    {cx:19.5,cy:0.96,rx:3.2,ryV:0.10,  color:'rgba(200,60,60,0.80)',  dash:[5,4]},
+    {cx:16.5,cy:1.18,rx:1.5,ryV:0.055, color:'rgba(20,100,50,0.80)',  dash:[5,4]},
+    {cx:24.5,cy:1.18,rx:1.3,ryV:0.055, color:'rgba(30,60,200,0.80)',  dash:[5,4]},
+  ];
+  ELLIPSES.forEach(el=>{
+    ctx.strokeStyle=el.color;
+    ctx.lineWidth=1.6;
+    ctx.setLineDash(el.dash);
+    ctx.beginPath();
+    // 타원을 차트 좌표계에서 픽셀로 변환하여 그림
+    const cxPx=px(el.cx), cyPy=py(el.cy);
+    const rxPx=(el.rx/(XMAX-XMIN))*CW;
+    const ryPy=(el.ryV/(YMAX-YMIN))*CH;
+    ctx.ellipse(cxPx, cyPy, rxPx, ryPy, 0, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.setLineDash([]);
   });
+
+  // ── 플레이버 단어 ──
+  const FW=[
+    {t:'Acid/Sour', x:15.0,y:1.54,c:'#5a9a2a',fs:11,fw:'700'},
+    {t:'Astringent',x:19.5,y:1.53,c:'#5a5080',fs:9, fw:'600'},
+    {t:'Bitter',    x:24.5,y:1.54,c:'#2d5a8a',fs:12,fw:'700'},
+    {t:'Citrus',    x:15.2,y:1.45,c:'#d09010',fs:12,fw:'700'},
+    {t:'Viscous/Thick',x:19.5,y:1.42,c:'#5a5080',fs:8,fw:'500'},
+    {t:'Roasted',   x:24.2,y:1.43,c:'#7a4018',fs:10,fw:'600'},
+    {t:'Berry',     x:14.8,y:1.34,c:'#b02858',fs:9, fw:'600'},
+    {t:'Dark Greens',x:17.8,y:1.35,c:'#2a6a2a',fs:8,fw:'500'},
+    {t:'Burnt/Ash', x:22.5,y:1.33,c:'#6a5040',fs:8, fw:'500'},
+    {t:'Dried Fruit',x:16.5,y:1.29,c:'#b05818',fs:9,fw:'500'},
+    {t:'Earthy',    x:22.0,y:1.26,c:'#7a6040',fs:8, fw:'500'},
+    {t:"'Sweet'",   x:14.8,y:0.85,c:'#b02858',fs:11,fw:'700'},
+    {t:'Black Tea', x:24.0,y:0.85,c:'#1a3a5a',fs:10,fw:'600'},
+  ];
+  FW.forEach(f=>{
+    const fpx=px(f.x), fpy=py(f.y);
+    if(fpx<PL||fpx>PL+CW||fpy<PT||fpy>PT+CH) return;
+    let alpha=0.72;
+    if(s.hT){
+      const dx=s.ext-f.x, dy=(s.tRaw-f.y)*10;
+      if(Math.sqrt(dx*dx+dy*dy)<2.5) alpha=1.0;
+    }
+    ctx.globalAlpha=alpha;
+    ctx.font=`${f.fw} ${f.fs}px 'Noto Sans KR',sans-serif`;
+    ctx.fillStyle=f.c;
+    ctx.textAlign='center';
+    ctx.fillText(f.t, fpx, fpy);
+  });
+  ctx.globalAlpha=1;
+
+  // ── 소비자 라벨 ──
+  ctx.font=`600 8px 'Noto Sans KR',sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(180,30,30,0.90)';
+  ctx.fillText('Consumers I', px(19.5), py(1.08));
+  ctx.fillStyle='rgba(20,100,50,0.90)';
+  ctx.fillText('Consumers II', px(16.5), py(1.225));
+  ctx.fillStyle='rgba(30,60,180,0.90)';
+  ctx.fillText('Consumers II', px(24.5), py(1.225));
+
+  // ── 레시피 기준점 + 화살표 목표: 동일한 비율선 위 수율 20% 지점 ──
+  // TDS(%) = (dose_g / brew_vol_ml) × extraction(%)
+  const UCD_IDEAL_EXT = 20;
+  const UCD_RTDS = +(s.dose / s.bVol * UCD_IDEAL_EXT).toFixed(4);
+  const UCD_TARGET_EXT = UCD_IDEAL_EXT;
+  const UCD_TARGET_TDS = UCD_RTDS;
+
+  // ── 화살표: 내 커피 → 같은 비율선 위 수율 20% ──
+  if(s.hT && zKey!=='classic'){
+    const x1=px(s.ext), y1=py(s.tRaw);
+    const x2=px(UCD_TARGET_EXT), y2=py(UCD_TARGET_TDS);
+    const dx=x2-x1, dy=y2-y1, dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist>20){
+      const sh=14;
+      const ax1=x1+dx/dist*sh, ay1=y1+dy/dist*sh;
+      const ax2=x2-dx/dist*sh, ay2=y2-dy/dist*sh;
+      ctx.beginPath();
+      ctx.moveTo(ax1,ay1); ctx.lineTo(ax2,ay2);
+      ctx.strokeStyle='rgba(226,75,74,0.70)';
+      ctx.lineWidth=1.8; ctx.setLineDash([5,3]); ctx.stroke();
+      ctx.setLineDash([]);
+      const angle=Math.atan2(dy, dx);
+      ctx.beginPath();
+      ctx.moveTo(ax2,ay2);
+      ctx.lineTo(ax2-11*Math.cos(angle-0.38), ay2-11*Math.sin(angle-0.38));
+      ctx.lineTo(ax2-11*Math.cos(angle+0.38), ay2-11*Math.sin(angle+0.38));
+      ctx.closePath();
+      ctx.fillStyle='rgba(226,75,74,0.85)'; ctx.fill();
+    }
+  }
+
+  // ── 레시피 기준점 (초록, 비율선 위) ──
+  if(UCD_RTDS >= YMIN && UCD_RTDS <= YMAX){
+    ctx.beginPath();
+    ctx.arc(px(UCD_IDEAL_EXT), py(UCD_RTDS), 7, 0, Math.PI*2);
+    ctx.fillStyle='#3d6b2f'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
+  }
+
+  // ── 내 커피 점 (빨강, 맨 위) ──
+  if(s.hT){
+    const mx=px(s.ext), my=py(s.tRaw);
+    ctx.beginPath();
+    ctx.arc(mx, my, 15, 0, Math.PI*2);
+    ctx.fillStyle='rgba(226,75,74,0.15)'; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(mx, my, 10, 0, Math.PI*2);
+    ctx.fillStyle='#e24b4a'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
+  }
+
+  ctx.restore(); // clip 해제
+
+  // ── 축 ──
+  ctx.fillStyle='#9a9690';
+  ctx.font=`400 8px 'Noto Sans KR',sans-serif`;
+  ctx.textAlign='center';
+  // X축
+  for(let xv=14;xv<=26;xv+=2){
+    ctx.fillText(xv+'%', px(xv), PT+CH+14);
+  }
+  // Y축
+  ctx.textAlign='right';
+  for(let yv=0.8;yv<=1.62;yv+=0.1){
+    const yvR=+(yv.toFixed(1));
+    ctx.fillText(yvR.toFixed(1)+'%', PL-4, py(yvR)+3);
+  }
+  // Brew Ratio 오른쪽
+  ctx.textAlign='left';
+  ctx.fillStyle='rgba(160,110,50,0.75)';
+  URATIOS.forEach(r=>{
+    const tdsAt=26/r/100;
+    if(tdsAt<YMIN||tdsAt>YMAX) return;
+    ctx.fillText(r+'g/L', PL+CW+4, py(tdsAt)+3);
+  });
+  // 축 제목
+  ctx.fillStyle='#7a7870';
+  ctx.font=`400 9px 'Noto Sans KR',sans-serif`;
+  ctx.textAlign='center';
+  ctx.fillText('Percent Extraction (%)', PL+CW/2, H-2);
+  ctx.save();
+  ctx.translate(11, PT+CH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('Total Dissolved Solids (%)', 0, 0);
+  ctx.restore();
 }
 
-// ──────────────────────────────────────────────
-// FEEDBACK
-// ──────────────────────────────────────────────
 function buildFeedback(s){
   const sm=SCA_META[s.scaZ||'ideal'], um=UCD_META[s.ucdZ||'classic'];
   document.getElementById('sca-fb').innerHTML=`
@@ -717,6 +855,8 @@ function buildDiffNote(s){
 // ──────────────────────────────────────────────
 ['dose','water','brew','tds'].forEach(id=>document.getElementById(id).addEventListener('input',render));
 render();
+// 창 크기 변경 시 UC Davis 캔버스 재렌더
+window.addEventListener('resize', ()=>{ const s=getState(); buildUCD(s); });
 </script>
 </body>
 </html>
