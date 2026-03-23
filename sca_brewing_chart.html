@@ -167,6 +167,12 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
     </div>
     <div class="chart-card">
       <div class="card-title">Strength × Extraction</div>
+      <div id="sca-legend" style="display:flex;gap:0.8rem;flex-wrap:wrap;justify-content:center;
+        margin-bottom:0.4rem;font-size:0.63rem;color:var(--mid);">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e24b4a;border:1.5px solid #fff;box-shadow:0 0 0 1px #e24b4a;vertical-align:middle;margin-right:3px;"></span>현재 내 커피</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d4a017;border:1.5px solid #fff;box-shadow:0 0 0 1px #d4a017;vertical-align:middle;margin-right:3px;"></span>목표 (이상 구간)</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #2060c0;vertical-align:middle;margin-right:3px;"></span>물량 조정 후 예상</span>
+      </div>
       <div class="chart-wrap"><canvas id="scaC"></canvas></div>
     </div>
     <div class="fb-card">
@@ -183,6 +189,12 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
     </div>
     <div class="chart-card">
       <div class="card-title">Flavor Zone · Brew Ratio</div>
+      <div id="ucd-legend" style="display:flex;gap:0.8rem;flex-wrap:wrap;justify-content:center;
+        margin-bottom:0.4rem;font-size:0.63rem;color:var(--mid);">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e24b4a;border:1.5px solid #fff;box-shadow:0 0 0 1px #e24b4a;vertical-align:middle;margin-right:3px;"></span>현재 내 커피</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d4a017;border:1.5px solid #fff;box-shadow:0 0 0 1px #d4a017;vertical-align:middle;margin-right:3px;"></span>목표 (이상 구간)</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #2060c0;vertical-align:middle;margin-right:3px;"></span>물량 조정 후 예상</span>
+      </div>
       <div class="chart-wrap" style="position:relative;">
         <canvas id="ucdC" style="width:100%;height:100%;display:block;"></canvas>
       </div>
@@ -214,15 +226,15 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
 // SCA DATA
 // ──────────────────────────────────────────────
 const SCA_META={
-  ideal:       {label:'SCA Ideal 이상적',         badge:'b-ideal',  fbG:'유지',                    fbD:'유지',                  note:'모든 파라미터가 SCA 이상 구간. Sweet, Balanced.'},
-  strong:      {label:'SCA Strong 강함',           badge:'b-strong', fbG:'유지',                    fbD:'원두 줄이기 (농도↓)',   note:'수율 적정. 농도만 높음 → 원두 줄이거나 물 늘리기.'},
-  weak:        {label:'SCA Weak 약함',             badge:'b-weak',   fbG:'유지',                    fbD:'원두 늘리기 (농도↑)',   note:'수율 적정. 농도만 낮음 → 원두 늘리거나 물 줄이기.'},
-  under:       {label:'SCA Underextracted 과소추출',badge:'b-sour',  fbG:'→ 분쇄 곱게 (수율↑)',    fbD:'유지',                  note:'미추출(신맛). 분쇄 곱게 → 수율 상승.'},
-  bitter:      {label:'SCA Overextracted 과다추출', badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',    fbD:'유지',                  note:'과추출(쓴맛). 분쇄 굵게 → 수율 하락.'},
-  strong_under:{label:'SCA Strong & Under',        badge:'b-strong', fbG:'→ 분쇄 곱게 (수율↑)',    fbD:'원두 줄이기 (농도↓)',   note:'미추출+고농도. 두 방향 동시 조정.'},
-  strong_bitter:{label:'SCA Strong & Over',        badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',    fbD:'원두 줄이기 (농도↓)',   note:'과추출+고농도. 두 방향 동시 조정.'},
-  weak_under:  {label:'SCA Weak & Under',          badge:'b-weak',   fbG:'→ 분쇄 곱게 (수율↑)',    fbD:'원두 늘리기 (농도↑)',   note:'미추출+저농도. 두 방향 동시 조정.'},
-  weak_bitter: {label:'SCA Weak & Over',           badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',    fbD:'원두 늘리기 (농도↑)',   note:'과추출+저농도. 두 방향 동시 조정.'},
+  ideal:       {label:'SCA Ideal 이상적',         badge:'b-ideal',  fbG:'유지',                    fbD:'유지',                  fbW:'유지',                      note:'모든 파라미터가 SCA 이상 구간. Sweet, Balanced.'},
+  strong:      {label:'SCA Strong 강함',           badge:'b-strong', fbG:'유지',                    fbD:'원두 줄이기 (농도↓)',   fbW:'물 늘리기 (농도↓, 비율선↓)', note:'수율 적정. 농도만 높음 → 원두 줄이거나 물 늘리기.'},
+  weak:        {label:'SCA Weak 약함',             badge:'b-weak',   fbG:'유지',                    fbD:'원두 늘리기 (농도↑)',   fbW:'물 줄이기 (농도↑, 비율선↑)', note:'수율 적정. 농도만 낮음 → 원두 늘리거나 물 줄이기.'},
+  under:       {label:'SCA Underextracted 과소추출',badge:'b-sour',  fbG:'→ 분쇄 곱게 (수율↑)',    fbD:'유지',                  fbW:'물 늘리기 (비율선↓ → 수율↑)',note:'미추출(신맛). 분쇄 곱게 또는 물 늘리기 → 수율 상승.'},
+  bitter:      {label:'SCA Overextracted 과다추출', badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',    fbD:'유지',                  fbW:'물 줄이기 (비율선↑ → 수율↓)',note:'과추출(쓴맛). 분쇄 굵게 또는 물 줄이기 → 수율 하락.'},
+  strong_under:{label:'SCA Strong & Under',        badge:'b-strong', fbG:'→ 분쇄 곱게 (수율↑)',    fbD:'원두 줄이기 (농도↓)',   fbW:'물 늘리기 (농도↓+수율↑)',   note:'미추출+고농도. 물 늘리기로 두 문제 동시 해결 가능.'},
+  strong_bitter:{label:'SCA Strong & Over',        badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',    fbD:'원두 줄이기 (농도↓)',   fbW:'물 줄이기 후 재조정',        note:'과추출+고농도. 분쇄 굵게 + 원두 줄이기가 우선.'},
+  weak_under:  {label:'SCA Weak & Under',          badge:'b-weak',   fbG:'→ 분쇄 곱게 (수율↑)',    fbD:'원두 늘리기 (농도↑)',   fbW:'물 줄이기 (농도↑+비율선↑)', note:'미추출+저농도. 물 줄이기로 농도↑, 분쇄 곱게로 수율↑.'},
+  weak_bitter: {label:'SCA Weak & Over',           badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',    fbD:'원두 늘리기 (농도↑)',   fbW:'물 줄이기 후 재조정',        note:'과추출+저농도. 분쇄 굵게 + 원두 늘리기가 우선.'},
 };
 const SCA_ZONES=[
   {k:'strong_under',x1:14,x2:18,y1:1.45,y2:1.80},{k:'strong',x1:18,x2:22,y1:1.45,y2:1.80},{k:'strong_bitter',x1:22,x2:26,y1:1.45,y2:1.80},
@@ -274,7 +286,7 @@ const UCD_ZONES=[
   {k:'tea_like',     lbl:'Tea-like',           x1:22,x2:26,y1:0.90,y2:1.15,fill:'rgba(100,190,150,', badge:'b-tea'},
 ];
 const UCD_META={
-  classic:     {label:'Classic Standard 이상적', badge:'b-classic',fbG:'유지',fbD:'유지',
+  classic:     {label:'Classic Standard 이상적', badge:'b-classic',fbG:'유지',fbD:'유지',fbW:'유지',
     note:'UC Davis 이상 구간. Sweet, Clean, Balanced.',
     c1:'✓ 이미 일반 소비자가 선호하는 달콤하고 균형 잡힌 구간입니다.',
     c1dir:'현재 유지',
@@ -282,7 +294,7 @@ const UCD_META={
     c2adir:'현재 유지 또는 소량 수율↑ (Citrus 방향)',
     c2b:'✓ 스페셜티 소비자 (다크파)도 수용 가능한 구간.',
     c2bdir:'현재 유지 또는 소량 수율↑ (Roasted 방향)'},
-  thick:       {label:'Thick 걸쭉함',            badge:'b-thick',  fbG:'유지',fbD:'원두 줄이기 (농도↓)',
+  thick:       {label:'Thick 걸쭉함',            badge:'b-thick',  fbG:'유지',fbD:'원두 줄이기 (농도↓)',fbW:'물 늘리기 (농도↓, 비율선↓)',
     note:'농도 과잉. 원두 줄이거나 물 늘리기.',
     c1:'묽고 달콤한 쪽 선호 → 물 늘려 농도 낮추고 Classic 방향으로.',
     c1dir:'물 늘리기 → Classic Standard',
@@ -290,7 +302,7 @@ const UCD_META={
     c2adir:'원두 줄이기 → Sour/Citrus 구간',
     c2b:'다크파는 Thick + Roasted 선호 가능. 수율만 살짝 높이기.',
     c2bdir:'→ 분쇄 소량 곱게 (Roasted 구간 유지)'},
-  thin:        {label:'Thin 묽음',               badge:'b-thin',   fbG:'유지',fbD:'원두 늘리기 (농도↑)',
+  thin:        {label:'Thin 묽음',               badge:'b-thin',   fbG:'유지',fbD:'원두 늘리기 (농도↑)',fbW:'물 줄이기 (농도↑, 비율선↑)',
     note:'농도 부족. 원두 늘리거나 물 줄이기.',
     c1:'✓ Consumers I에 근접. 원두 소량 늘리면 Sweet → Classic 도달.',
     c1dir:'원두 소량 늘리기 → Sweet → Classic',
@@ -298,7 +310,7 @@ const UCD_META={
     c2adir:'원두 늘리기 → Sour/Citrus 방향',
     c2b:'다크파는 높은 수율+높은 농도 선호 → 원두 늘리기.',
     c2bdir:'원두 늘리기 → Roasted/Earthy 방향'},
-  sour_citrus: {label:'Sour & Citrus 신맛',      badge:'b-sour',   fbG:'→ 분쇄 곱게 (수율↑)',fbD:'원두 줄이기 (농도↓)',
+  sour_citrus: {label:'Sour & Citrus 신맛',      badge:'b-sour',   fbG:'→ 분쇄 곱게 (수율↑)',fbD:'원두 줄이기 (농도↓)',fbW:'물 늘리기 (농도↓+수율↑)',
     note:'미추출+고농도. 분쇄 곱게 + 원두 줄이기.',
     c1:'산미 선호 낮음 → 분쇄 곱게 + 원두 줄여 Classic 방향으로.',
     c1dir:'→ 분쇄 곱게 + 원두 줄이기 → Classic',
@@ -306,7 +318,7 @@ const UCD_META={
     c2adir:'현재 유지 또는 원두 소량 줄이기',
     c2b:'다크파에게는 산미가 과함 → 분쇄 곱게 하여 수율↑ + 원두 줄이기.',
     c2bdir:'→ 분쇄 곱게 + 원두 줄이기 → Classic → Roasted 방향'},
-  bitter_roast:{label:'Bitter & Roasted 쓴맛',   badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',fbD:'원두 줄이기 (농도↓)',
+  bitter_roast:{label:'Bitter & Roasted 쓴맛',   badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',fbD:'원두 줄이기 (농도↓)',fbW:'물 줄이기 후 재조정',
     note:'과추출+고농도. 분쇄 굵게 + 원두 줄이기.',
     c1:'쓴맛/로스티 기피 → 분쇄 굵게 + 원두 줄여 Classic으로.',
     c1dir:'← 분쇄 굵게 + 원두 줄이기 → Classic',
@@ -314,23 +326,23 @@ const UCD_META={
     c2adir:'← 분쇄 굵게 + 원두 줄이기 → Sour/Citrus 방향',
     c2b:'✓ Consumers II 우측 구간. 다크파는 Roasted 풍미 선호.',
     c2bdir:'현재 유지 또는 원두 소량 줄이기'},
-  sour_mid:    {label:'Underextracted 미추출',   badge:'b-sour',   fbG:'→ 분쇄 곱게 (수율↑)',fbD:'유지',
-    note:'미추출. 분쇄 곱게 → 수율 상승.',
+  sour_mid:    {label:'Underextracted 미추출',   badge:'b-sour',   fbG:'→ 분쇄 곱게 (수율↑)',fbD:'유지',fbW:'물 늘리기 (비율선↓ → 수율↑)',
+    note:'미추출. 분쇄 곱게 또는 물 늘리기 → 수율 상승.',
     c1:'산미보다 달콤함 선호 → 분쇄 곱게 하여 Classic 방향으로.',
     c1dir:'→ 분쇄 곱게 → Classic Standard',
     c2a:'✓ Consumers II 좌상단 근처. 산미파는 현재 위치가 선호 구간.',
     c2adir:'현재 유지 또는 소량 곱게 (Citrus 구간 진입)',
     c2b:'다크파는 높은 수율 선호 → 분쇄 곱게 하여 수율↑ + Classic 경유 Roasted 방향.',
     c2bdir:'→ 분쇄 곱게 → Classic → Roasted 방향'},
-  bitter_mid:  {label:'Overextracted 과추출',    badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',fbD:'유지',
-    note:'과추출. 분쇄 굵게 → 수율 하락.',
+  bitter_mid:  {label:'Overextracted 과추출',    badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',fbD:'유지',fbW:'물 줄이기 (비율선↑ → 수율↓)',
+    note:'과추출. 분쇄 굵게 또는 물 줄이기 → 수율 하락.',
     c1:'쓴맛 기피 → 분쇄 굵게 하여 Classic 방향으로.',
     c1dir:'← 분쇄 굵게 → Classic Standard',
     c2a:'산미파는 과추출 비선호 → 분쇄 굵게 + 수율↓ 후 Classic 경유 산미 구간.',
     c2adir:'← 분쇄 굵게 → Classic → Sour/Citrus 방향',
     c2b:'✓ Consumers II 우측 근처. 다크파는 Earthy/Roasted 수용 가능.',
     c2bdir:'현재 유지 또는 원두 소량 줄이기'},
-  sweet:       {label:'Sweet 달콤하나 약함',      badge:'b-sweet',  fbG:'→ 분쇄 곱게 (수율↑)',fbD:'원두 늘리기 (농도↑)',
+  sweet:       {label:'Sweet 달콤하나 약함',      badge:'b-sweet',  fbG:'→ 분쇄 곱게 (수율↑)',fbD:'원두 늘리기 (농도↑)',fbW:'물 줄이기 (농도↑, 비율선↑)',
     note:'미추출+저농도. 분쇄 곱게 + 원두 늘리기.',
     c1:"✓ Consumers I 선호 구간에 근접. 원두 소량 늘리면 Sweet → Classic 도달.",
     c1dir:'원두 소량 늘리기 → Classic Standard',
@@ -338,7 +350,7 @@ const UCD_META={
     c2adir:'원두 늘리기 → Sour/Citrus 방향',
     c2b:'다크파는 높은 수율 선호 → 분쇄 곱게 + 원두 늘리기.',
     c2bdir:'→ 분쇄 곱게 + 원두 늘리기 → Classic → Roasted 방향'},
-  tea_like:    {label:'Tea-like 차처럼',          badge:'b-tea',    fbG:'← 분쇄 굵게 (수율↓)',fbD:'원두 늘리기 (농도↑)',
+  tea_like:    {label:'Tea-like 차처럼',          badge:'b-tea',    fbG:'← 분쇄 굵게 (수율↓)',fbD:'원두 늘리기 (농도↑)',fbW:'물 줄이기 후 재조정',
     note:'과추출+저농도. 분쇄 굵게 + 원두 늘리기.',
     c1:'이 구간 기피 → 분쇄 굵게 + 원두 늘려 Classic 또는 Sweet로.',
     c1dir:'← 분쇄 굵게 + 원두 늘리기 → Classic',
@@ -440,11 +452,30 @@ function getState(){
   const scaZ = (hT && ext !== null && !peOutOfRange) ? scaClassify(tRaw, ext) : null;
   const ucdZ = (hT && ext !== null && !peOutOfRange) ? ucdClassify(tRaw, ext) : null;
 
+  // 물량 조정 후 예상 위치 계산
+  // SCA 이상 중심 통과 Rbrew: PE=20%, TDS=1.30
+  const scaIdealRbrew = (20/100)/((1.30/100)/(1-1.30/100)) + 2.1;
+  // UCD 이상 중심 통과 Rbrew: PE=20%, TDS=1.25
+  const ucdIdealRbrew = (20/100)/((1.25/100)/(1-1.25/100)) + 2.1;
+  const scaTargetWater = Math.round(scaIdealRbrew * dose);
+  const ucdTargetWater = Math.round(ucdIdealRbrew * dose);
+
+  // 현재 TDS로 권장 물량에서의 수율 예상
+  let scaPredExt = null, ucdPredExt = null;
+  if(hT && tRaw){
+    const td = tRaw/100;
+    scaPredExt = td/(1-td) * (scaIdealRbrew - RABS) * 100;
+    ucdPredExt = td/(1-td) * (ucdIdealRbrew - RABS) * 100;
+  }
+
   return {
     dose, water, bVol, tRaw: hT ? tRaw : null,
     hT, ext, scaZ, ucdZ,
     ratio: Rbrew, Rbrew, RABS,
-    errors, hasError, peOutOfRange
+    errors, hasError, peOutOfRange,
+    scaIdealRbrew, ucdIdealRbrew,
+    scaTargetWater, ucdTargetWater,
+    scaPredExt, ucdPredExt
   };
 }
 
@@ -489,6 +520,15 @@ function render(){
   buildUCD(s);
   buildFeedback(s);
   buildDiffNote(s);
+
+  // 물량 조정 후 예상점 범례 동적 표시/숨김
+  const showPred = s.hT && s.scaPredExt !== null && Math.abs(s.scaTargetWater - s.water) > 5;
+  ['sca-legend','ucd-legend'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    const predSpan = el.querySelector('span:last-child');
+    if(predSpan) predSpan.style.opacity = showPred ? '1' : '0.3';
+  });
 }
 
 // ──────────────────────────────────────────────
@@ -524,7 +564,7 @@ function buildSCA(s){
 
   // 레시피 기준점 표시 (교차 있으면 초록, 없으면 회색으로 구분)
   ds.push({type:'scatter',label:'레시피',data:[{x:SCA_TARGET_EXT, y:SCA_TARGET_TDS}],
-    backgroundColor: scaTarget.inIdeal ? '#3d6b2f' : '#888888',
+    backgroundColor: scaTarget.inIdeal ? '#d4a017' : '#aaaaaa',
     borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
 
   // 내 커피 + 화살표: 수율이 차트 범위(13~27%) 안일 때만 표시
@@ -535,6 +575,19 @@ function buildSCA(s){
   if(inRange) ds.push({type:'scatter',label:'내 커피',
     data:[{x:+s.ext.toFixed(2),y:s.tRaw}],
     backgroundColor:'#e24b4a',borderColor:'#fff',borderWidth:2.5,pointRadius:10,pointHoverRadius:12,order:0});
+
+  // 물량 조정 후 예상 위치 (파란 점) — 현재와 다를 때만
+  if(s.hT && s.scaPredExt !== null && Math.abs(s.scaTargetWater - s.water) > 5){
+    const predInRange = s.scaPredExt >= 13 && s.scaPredExt <= 27;
+    const predTDS = s.tRaw; // TDS는 동일 (같은 커피, 같은 추출)
+    if(predInRange && predTDS >= 0.88 && predTDS <= 1.82){
+      ds.push({type:'scatter',label:'물량 조정 후',
+        data:[{x:+s.scaPredExt.toFixed(2), y:predTDS}],
+        backgroundColor:'#2060c0',borderColor:'#fff',borderWidth:2,
+        pointRadius:7,pointHoverRadius:9,order:1,
+        pointStyle:'triangle'});
+    }
+  }
 
   scaChart=new Chart(document.getElementById('scaC').getContext('2d'),{
     type:'scatter',data:{datasets:ds},
@@ -547,7 +600,7 @@ function buildSCA(s){
       },
       plugins:{legend:{display:false},tooltip:{filter:i=>!i.dataset.label.startsWith('_'),callbacks:{label:ctx=>{
         if(ctx.dataset.label==='내 커피') return `TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`;
-        if(ctx.dataset.label==='레시피') return `레시피 기준 — TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`; return null;
+        if(ctx.dataset.label==='레시피') return `🟡 목표점 — TDS:${ctx.parsed.y.toFixed(2)}%  수율:${ctx.parsed.x.toFixed(1)}%`; return null;
       }}}}
     },
     plugins:[{id:'sL',afterDraw(chart){
@@ -885,7 +938,7 @@ function buildUCD(s){
   if(UCD_TARGET_TDS >= YMIN && UCD_TARGET_TDS <= YMAX){
     ctx.beginPath();
     ctx.arc(px(UCD_TARGET_EXT), py(UCD_TARGET_TDS), 7, 0, Math.PI*2);
-    ctx.fillStyle = ucdTarget.inIdeal ? '#3d6b2f' : '#888888';
+    ctx.fillStyle = ucdTarget.inIdeal ? '#d4a017' : '#aaaaaa';
     ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
   }
@@ -900,6 +953,27 @@ function buildUCD(s){
     ctx.arc(mx, my, 10, 0, Math.PI*2);
     ctx.fillStyle='#e24b4a'; ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
+  }
+
+  // ── 물량 조정 후 예상 위치 (파란 삼각형) ──
+  if(s.hT && s.ucdPredExt !== null && Math.abs(s.ucdTargetWater - s.water) > 5){
+    const predPE = s.ucdPredExt;
+    const predTDS = s.tRaw;
+    if(predPE >= XMIN && predPE <= XMAX && predTDS >= YMIN && predTDS <= YMAX){
+      const bx = px(predPE), by = py(predTDS), r = 8;
+      ctx.beginPath();
+      ctx.moveTo(bx, by - r);
+      ctx.lineTo(bx + r*0.866, by + r*0.5);
+      ctx.lineTo(bx - r*0.866, by + r*0.5);
+      ctx.closePath();
+      ctx.fillStyle='#2060c0'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+      // 라벨
+      ctx.font=`500 7.5px 'Noto Sans KR',sans-serif`;
+      ctx.fillStyle='rgba(20,60,180,0.85)';
+      ctx.textAlign='center';
+      ctx.fillText('물량 조정 후', bx, by - r - 4);
+    }
   }
 
   // ── 범위 밖 경고 텍스트 ──
@@ -990,9 +1064,33 @@ function buildFeedback(s){
 
   // ── 정상 범위: 기존 피드백 ──
   const sm=SCA_META[s.scaZ||'ideal'], um=UCD_META[s.ucdZ||'classic'];
+
+  // 비율선이 이상 구간을 통과하는지 확인
+  const scaTarget = calcTarget(s.Rbrew, s.RABS, 18, 22, 1.15, 1.45);
+  const ucdTarget = calcTarget(s.Rbrew, s.RABS, 18, 22, 1.15, 1.35);
+  const scaRatioMiss = !scaTarget.inIdeal;
+  const ucdRatioMiss = !ucdTarget.inIdeal;
+
   document.getElementById('sca-fb').innerHTML=`
     <div class="fb-item"><strong>분쇄도</strong>${sm.fbG}</div>
     <div class="fb-item"><strong>원두 비율</strong>${sm.fbD}</div>
+    <div class="fb-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:0.4rem;margin-top:0.1rem;
+      ${scaRatioMiss?'background:#fff8f0;border-radius:6px;padding:0.5rem 0.6rem;border:1px solid rgba(180,100,20,0.25);':''}">
+      <strong style="${scaRatioMiss?'color:#b05010;':''}">물량 조정${scaRatioMiss?' ← 필수':''}</strong>
+      ${sm.fbW}
+      ${Math.abs(s.scaTargetWater - s.water) > 5 ? `
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;">
+          <span style="font-size:0.68rem;color:${scaRatioMiss?'#b05010':'var(--muted)'};">
+            💡 권장 물량: <strong>${s.scaTargetWater}ml</strong> (비율 1:${s.scaIdealRbrew.toFixed(1)})
+          </span>
+          <button onclick="document.getElementById('water').value=${s.scaTargetWater};render();"
+            style="font-size:0.65rem;padding:0.2rem 0.55rem;border-radius:5px;border:1px solid ${scaRatioMiss?'#c07020':'var(--accent)'};
+              background:${scaRatioMiss?'#fff3e8':'#f0f7ec'};color:${scaRatioMiss?'#b05010':'var(--accent)'};
+              cursor:pointer;font-family:inherit;white-space:nowrap;">
+            ${s.scaTargetWater}ml 적용 →
+          </button>
+        </div>` : ''}
+    </div>
     <div class="fb-note"><strong>전략</strong>  ${sm.note}</div>`;
 
   let flavorNote='';
@@ -1007,6 +1105,21 @@ function buildFeedback(s){
     <div style="grid-column:1/-1;font-size:0.73rem;color:var(--mid);line-height:1.6;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
       <strong style="color:var(--text);">현재 위치</strong>  ${um.note}
       ${flavorNote?`<span style="font-size:0.65rem;color:var(--muted);"> — 플레이버: </span>${flavorNote}`:''}
+      <span style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;flex-wrap:wrap;">
+        <span style="font-size:0.68rem;${ucdRatioMiss?'color:#b05010;font-weight:500;':'color:var(--muted);'}">
+          물량 조정: ${um.fbW}
+          ${ucdRatioMiss?` — 💡 권장 <strong>${s.ucdTargetWater}ml</strong> (비율 1:${s.ucdIdealRbrew.toFixed(1)})`:''}
+        </span>
+        ${Math.abs(s.ucdTargetWater - s.water) > 5 ? `
+          <button onclick="document.getElementById('water').value=${s.ucdTargetWater};render();"
+            style="font-size:0.65rem;padding:0.2rem 0.55rem;border-radius:5px;
+              border:1px solid ${ucdRatioMiss?'#c07020':'var(--accent)'};
+              background:${ucdRatioMiss?'#fff3e8':'#f0f7ec'};
+              color:${ucdRatioMiss?'#b05010':'var(--accent)'};
+              cursor:pointer;font-family:inherit;white-space:nowrap;">
+            ${s.ucdTargetWater}ml 적용 →
+          </button>` : ''}
+      </span>
     </div>
     <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-top:0.1rem;">
       <div style="border-left:3px solid rgba(200,60,60,0.75);padding-left:0.6rem;">
