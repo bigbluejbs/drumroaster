@@ -499,16 +499,19 @@ const FLAVOR_WORDS=[
   {t:'Black Tea', ex:24.0,td:0.85, c:'#2a4a6a', fs:11, fw:'600'},
 ];
 
-// 소비자 선호 타원 파라미터 (차트 데이터 좌표)
-// Consumers I: 중앙~좌측 하단, 일반 소비자 (달콤하고 묽은 쪽 선호)
-// Consumers II: 좌상단 + 우측 두 개, 스페셜티 소비자
+// 소비자 선호 타원 — 논문 Figure 5 (Cotter et al., 2021) 정밀 반영
+// Consumers I (57%): 돔형 피크 → PE 낮음~중간 + TDS 낮음 (lower left, 'Sweet' 구역)
+//   논문: "liked best coffees with low TDS and low to medium PE" / 피크 PE~18%, TDS~0.90~1.00%
+// Consumers II (43%): 안장형 두 봉우리
+//   좌상단: PE~15~16%, TDS~1.15~1.20% (Citrus/Berry/Dried Fruit 구역)
+//   우측:   PE~23~25%, TDS~1.15~1.25% (Earthy/Roasted/Black Tea 구역)
 const CONSUMER_ELLIPSES=[
-  // Consumers I — 빨간, 중앙 하단 크게
-  {label:'Consumers I', cx:19.5, cy:0.96, rx:3.2, ry:0.10, color:'rgba(200,60,60,', dash:[5,4]},
-  // Consumers II — 파란, 좌상단
-  {label:'Consumers II',cx:16.5, cy:1.18, rx:1.5, ry:0.055,color:'rgba(50,100,200,', dash:[5,4]},
-  // Consumers II — 파란, 우측
-  {label:'Consumers II',cx:24.5, cy:1.18, rx:1.3, ry:0.055,color:'rgba(50,100,200,', dash:[5,4]},
+  // Consumers I — 빨간 돔형, lower-left 피크, 가로로 넓고 세로 낮음
+  {label:'Consumers I', cx:17.5, cy:0.94, rx:3.0, ry:0.085, color:'rgba(200,60,60,', dash:[5,4]},
+  // Consumers II 좌상단 — 파란, Citrus/Berry 구역
+  {label:'Consumers II',cx:15.5, cy:1.18, rx:1.4, ry:0.060, color:'rgba(50,100,200,', dash:[5,4]},
+  // Consumers II 우측 — 파란, Earthy/Roasted 구역
+  {label:'Consumers II',cx:24.0, cy:1.20, rx:1.4, ry:0.060, color:'rgba(50,100,200,', dash:[5,4]},
 ];
 
 function buildUCD(s){
@@ -697,15 +700,18 @@ function buildUCD(s){
   });
   ctx.globalAlpha=1;
 
-  // ── 소비자 라벨 ──
+  // ── 소비자 라벨 (타원 중심 위에 표시) ──
   ctx.font=`600 8px 'Noto Sans KR',sans-serif`;
   ctx.textAlign='center';
-  ctx.fillStyle='rgba(180,30,30,0.90)';
-  ctx.fillText('Consumers I', px(19.5), py(1.08));
+  // Consumers I — 타원 중심 위
+  ctx.fillStyle='rgba(200,50,50,0.90)';
+  ctx.fillText('Consumers I', px(17.5), py(1.04));
+  // Consumers II 좌상단
   ctx.fillStyle='rgba(20,100,50,0.90)';
-  ctx.fillText('Consumers II', px(16.5), py(1.225));
+  ctx.fillText('Consumers II', px(15.5), py(1.26));
+  // Consumers II 우측
   ctx.fillStyle='rgba(30,60,180,0.90)';
-  ctx.fillText('Consumers II', px(24.5), py(1.225));
+  ctx.fillText('Consumers II', px(24.0), py(1.28));
 
   // ── 레시피 기준점 + 화살표 목표: 동일한 비율선(Rbrew) 위 PE=20% 지점 ──
   // 논문 역공식: TDS = PE / (PE + (Rbrew - 2.1)) × 100
@@ -874,9 +880,10 @@ function buildDiffNote(s){
 
   // Consumers I/II 위치 판단
   const ext=s.ext||0, tds=s.tRaw||0;
-  const inC1 = (ext>=16&&ext<=22) && (tds>=0.85&&tds<=1.05);  // Consumers I 돔
-  const inC2a = (ext>=14&&ext<=18) && (tds>=1.10&&tds<=1.25); // Consumers II 좌상단
-  const inC2b = (ext>=22&&ext<=26) && (tds>=1.10&&tds<=1.25); // Consumers II 우측
+  // 논문 Figure 5 기준 타원 근처 판단
+  const inC1  = (ext>=14&&ext<=21) && (tds>=0.86&&tds<=1.03);  // Consumers I 돔 (lower-left)
+  const inC2a = (ext>=14&&ext<=17) && (tds>=1.10&&tds<=1.26);  // Consumers II 좌상단 (Citrus/Berry)
+  const inC2b = (ext>=22&&ext<=26) && (tds>=1.10&&tds<=1.28);  // Consumers II 우측 (Roasted/Earthy)
   let consumerNote='';
   if(inC1) consumerNote=`<span style="color:rgba(180,40,40,0.9);">● Consumers I 선호 구간 근처</span> — 일반 소비자(57%) 최적 구간`;
   else if(inC2a) consumerNote=`<span style="color:rgba(20,100,50,0.9);">● Consumers II 산미 봉우리 근처</span> — 스페셜티 소비자(43%) 산미 선호 구간`;
