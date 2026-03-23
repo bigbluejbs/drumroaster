@@ -226,56 +226,74 @@ const UCD_META={
     note:'UC Davis 이상 구간. Sweet, Clean, Balanced.',
     c1:'✓ 이미 일반 소비자가 선호하는 달콤하고 균형 잡힌 구간입니다.',
     c1dir:'현재 유지',
-    c2:'✓ 스페셜티 소비자도 만족하는 Clean & Balanced 구간입니다.',
-    c2dir:'현재 유지'},
+    c2a:'✓ 스페셜티 소비자 (산미파)도 만족하는 Clean & Balanced 구간.',
+    c2adir:'현재 유지 또는 소량 수율↑ (Citrus 방향)',
+    c2b:'✓ 스페셜티 소비자 (다크파)도 수용 가능한 구간.',
+    c2bdir:'현재 유지 또는 소량 수율↑ (Roasted 방향)'},
   thick:       {label:'Thick 걸쭉함',            badge:'b-thick',  fbG:'유지',fbD:'원두 줄이기 (농도↓)',
     note:'농도 과잉. 원두 줄이거나 물 늘리기.',
-    c1:'일반 소비자는 묽고 달콤한 쪽 선호 → 물 늘려 농도 낮추기.',
-    c1dir:'← 물 늘리기 (Consumers I 방향)',
-    c2:'스페셜티 소비자는 Viscous/Thick도 수용 가능. 단 Roasted 방향 주의.',
-    c2dir:'원두 소량 줄이기 (Consumers II 유지)'},
+    c1:'묽고 달콤한 쪽 선호 → 물 늘려 농도 낮추고 Classic 방향으로.',
+    c1dir:'물 늘리기 → Classic Standard',
+    c2a:'Viscous/Thick은 일부 산미파에게 무거움. 원두 줄여 농도↓.',
+    c2adir:'원두 줄이기 → Sour/Citrus 구간',
+    c2b:'다크파는 Thick + Roasted 선호 가능. 수율만 살짝 높이기.',
+    c2bdir:'→ 분쇄 소량 곱게 (Roasted 구간 유지)'},
   thin:        {label:'Thin 묽음',               badge:'b-thin',   fbG:'유지',fbD:'원두 늘리기 (농도↑)',
     note:'농도 부족. 원두 늘리거나 물 줄이기.',
-    c1:'✓ 일반 소비자(Consumers I)에 가까운 구간. 소량 원두 늘리면 Sweet 구간 도달.',
-    c1dir:'원두 소량 늘리기',
-    c2:'스페셜티는 이 구간보다 높은 농도 선호 → 원두 늘려 Classic으로 이동.',
-    c2dir:'원두 늘리기 (Classic Standard 방향)'},
+    c1:'✓ Consumers I에 근접. 원두 소량 늘리면 Sweet → Classic 도달.',
+    c1dir:'원두 소량 늘리기 → Sweet → Classic',
+    c2a:'산미파는 더 높은 농도+낮은 수율 선호 → 원두 늘리기.',
+    c2adir:'원두 늘리기 → Sour/Citrus 방향',
+    c2b:'다크파는 높은 수율+높은 농도 선호 → 원두 늘리기.',
+    c2bdir:'원두 늘리기 → Roasted/Earthy 방향'},
   sour_citrus: {label:'Sour & Citrus 신맛',      badge:'b-sour',   fbG:'→ 분쇄 곱게 (수율↑)',fbD:'원두 줄이기 (농도↓)',
     note:'미추출+고농도. 분쇄 곱게 + 원두 줄이기.',
-    c1:'일반 소비자는 산미 선호 낮음 → 분쇄 곱게 + 원두 줄여 Classic 방향으로.',
-    c1dir:'→ 분쇄 곱게 + 원두 줄이기',
-    c2:'스페셜티(Consumers II 좌상단)는 Citrus 산미 선호. 원두만 소량 줄이기.',
-    c2dir:'원두 소량 줄이기 (Consumers II 구간 유지 가능)'},
+    c1:'산미 선호 낮음 → 분쇄 곱게 + 원두 줄여 Classic 방향으로.',
+    c1dir:'→ 분쇄 곱게 + 원두 줄이기 → Classic',
+    c2a:'✓ Consumers II 좌상단 구간. 산미파에게 이상적인 위치.',
+    c2adir:'현재 유지 또는 원두 소량 줄이기',
+    c2b:'다크파에게는 산미가 과함 → 분쇄 곱게 하여 수율↑ + 원두 줄이기.',
+    c2bdir:'→ 분쇄 곱게 + 원두 줄이기 → Classic → Roasted 방향'},
   bitter_roast:{label:'Bitter & Roasted 쓴맛',   badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',fbD:'원두 줄이기 (농도↓)',
     note:'과추출+고농도. 분쇄 굵게 + 원두 줄이기.',
-    c1:'일반 소비자는 쓴맛/로스티 선호 낮음 → 분쇄 굵게 + 원두 줄여 Classic으로.',
-    c1dir:'← 분쇄 굵게 + 원두 줄이기',
-    c2:'스페셜티(Consumers II 우측)는 일부 Roasted 수용. 분쇄만 소량 굵게.',
-    c2dir:'← 분쇄 소량 굵게 (Consumers II 우측 방향)'},
+    c1:'쓴맛/로스티 기피 → 분쇄 굵게 + 원두 줄여 Classic으로.',
+    c1dir:'← 분쇄 굵게 + 원두 줄이기 → Classic',
+    c2a:'산미파에게 과추출은 비선호 → 분쇄 굵게 + 원두 줄이기.',
+    c2adir:'← 분쇄 굵게 + 원두 줄이기 → Sour/Citrus 방향',
+    c2b:'✓ Consumers II 우측 구간. 다크파는 Roasted 풍미 선호.',
+    c2bdir:'현재 유지 또는 원두 소량 줄이기'},
   sour_mid:    {label:'Underextracted 미추출',   badge:'b-sour',   fbG:'→ 분쇄 곱게 (수율↑)',fbD:'유지',
     note:'미추출. 분쇄 곱게 → 수율 상승.',
-    c1:'일반 소비자는 산미보다 달콤함 선호 → 분쇄 곱게 하여 Classic 또는 Sweet 방향으로.',
-    c1dir:'→ 분쇄 곱게 (Classic 방향)',
-    c2:'스페셜티(Consumers II 좌상단)는 약한 산미 선호 가능. 현재에서 소량 조정.',
-    c2dir:'→ 분쇄 소량 곱게 (Consumers II 구간 근처)'},
+    c1:'산미보다 달콤함 선호 → 분쇄 곱게 하여 Classic 방향으로.',
+    c1dir:'→ 분쇄 곱게 → Classic Standard',
+    c2a:'✓ Consumers II 좌상단 근처. 산미파는 현재 위치가 선호 구간.',
+    c2adir:'현재 유지 또는 소량 곱게 (Citrus 구간 진입)',
+    c2b:'다크파는 높은 수율 선호 → 분쇄 곱게 하여 수율↑ + Classic 경유 Roasted 방향.',
+    c2bdir:'→ 분쇄 곱게 → Classic → Roasted 방향'},
   bitter_mid:  {label:'Overextracted 과추출',    badge:'b-bitter', fbG:'← 분쇄 굵게 (수율↓)',fbD:'유지',
     note:'과추출. 분쇄 굵게 → 수율 하락.',
-    c1:'일반 소비자는 쓴맛 기피 → 분쇄 굵게 하여 Classic 또는 Thin 방향으로.',
-    c1dir:'← 분쇄 굵게 (Classic 방향)',
-    c2:'스페셜티(Consumers II 우측)는 Earthy/Roasted 일부 수용. 소량 굵게.',
-    c2dir:'← 분쇄 소량 굵게 (Consumers II 우측 근처)'},
+    c1:'쓴맛 기피 → 분쇄 굵게 하여 Classic 방향으로.',
+    c1dir:'← 분쇄 굵게 → Classic Standard',
+    c2a:'산미파는 과추출 비선호 → 분쇄 굵게 + 수율↓ 후 Classic 경유 산미 구간.',
+    c2adir:'← 분쇄 굵게 → Classic → Sour/Citrus 방향',
+    c2b:'✓ Consumers II 우측 근처. 다크파는 Earthy/Roasted 수용 가능.',
+    c2bdir:'현재 유지 또는 원두 소량 줄이기'},
   sweet:       {label:'Sweet 달콤하나 약함',      badge:'b-sweet',  fbG:'→ 분쇄 곱게 (수율↑)',fbD:'원두 늘리기 (농도↑)',
     note:'미추출+저농도. 분쇄 곱게 + 원두 늘리기.',
-    c1:'✓ 일반 소비자(Consumers I) 선호 구간에 근접. 원두 소량 늘려 Classic으로.',
-    c1dir:'원두 소량 늘리기 (Consumers I → Classic)',
-    c2:'스페셜티는 이 구간보다 높은 농도+수율 선호 → 분쇄 곱게 + 원두 늘리기.',
-    c2dir:'→ 분쇄 곱게 + 원두 늘리기 (Classic 방향)'},
+    c1:"✓ Consumers I 선호 구간에 근접. 원두 소량 늘리면 Sweet → Classic 도달.",
+    c1dir:'원두 소량 늘리기 → Classic Standard',
+    c2a:'산미파는 높은 농도+낮은 수율 선호 → 원두 늘리기.',
+    c2adir:'원두 늘리기 → Sour/Citrus 방향',
+    c2b:'다크파는 높은 수율 선호 → 분쇄 곱게 + 원두 늘리기.',
+    c2bdir:'→ 분쇄 곱게 + 원두 늘리기 → Classic → Roasted 방향'},
   tea_like:    {label:'Tea-like 차처럼',          badge:'b-tea',    fbG:'← 분쇄 굵게 (수율↓)',fbD:'원두 늘리기 (농도↑)',
     note:'과추출+저농도. 분쇄 굵게 + 원두 늘리기.',
-    c1:'일반 소비자는 이 구간 기피 → 분쇄 굵게 + 원두 늘려 Classic 또는 Sweet로.',
-    c1dir:'← 분쇄 굵게 + 원두 늘리기',
-    c2:'스페셜티(Consumers II 우측)에 위치. 원두만 늘려 농도 높이기.',
-    c2dir:'원두 늘리기 (Consumers II 우측 → 농도↑)'},
+    c1:'이 구간 기피 → 분쇄 굵게 + 원두 늘려 Classic 또는 Sweet로.',
+    c1dir:'← 분쇄 굵게 + 원두 늘리기 → Classic',
+    c2a:'산미파 비선호 구간 → 분쇄 굵게 + 원두 늘리기.',
+    c2adir:'← 분쇄 굵게 + 원두 늘리기 → Sour/Citrus 방향',
+    c2b:'✓ Consumers II 우측 하단 근처. 다크파는 원두만 늘려 농도↑.',
+    c2bdir:'원두 늘리기 → Roasted/Earthy 방향'},
 };
 function ucdClassify(t,e){
   const hi=t>1.35,lo=t<1.15,ov=e>22,un=e<18;
@@ -615,7 +633,7 @@ function buildFeedback(s){
     <div class="fb-item"><strong>분쇄도</strong>${sm.fbG}</div>
     <div class="fb-item"><strong>원두 비율</strong>${sm.fbD}</div>
     <div class="fb-note"><strong>전략</strong>  ${sm.note}</div>`;
-  // UC Davis 피드백 — 소비자 유형별 + 근처 플레이버
+  // UC Davis 피드백 — 소비자 3유형 + 근처 플레이버
   let flavorNote='';
   if(s.hT){
     const nearby=FLAVOR_WORDS.filter(fw=>{
@@ -625,23 +643,32 @@ function buildFeedback(s){
     if(nearby.length>0) flavorNote=`<span style="color:#8a5020;font-weight:500;">${nearby.join(' · ')}</span>`;
   }
   document.getElementById('ucd-fb').innerHTML=`
-    <div class="fb-item" style="grid-column:1/-1;">
-      <strong>현재 위치</strong>${um.note}
-      ${flavorNote ? `<span style="font-size:0.68rem;color:var(--muted);"> — 플레이버: </span>${flavorNote}` : ''}
+    <div style="grid-column:1/-1;font-size:0.73rem;color:var(--mid);line-height:1.6;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
+      <strong style="color:var(--text);">현재 위치</strong>  ${um.note}
+      ${flavorNote?`<span style="font-size:0.65rem;color:var(--muted);"> — 플레이버: </span>${flavorNote}`:''}
     </div>
-    <div class="fb-consumer" style="border-left:3px solid rgba(200,60,60,0.7);padding-left:0.65rem;">
-      <div style="font-size:0.63rem;font-weight:500;color:rgba(180,40,40,0.9);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">
-        ● Consumers I — 일반 소비자
+    <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-top:0.1rem;">
+      <div style="border-left:3px solid rgba(200,60,60,0.75);padding-left:0.6rem;">
+        <div style="font-size:0.6rem;font-weight:500;color:rgba(180,40,40,0.95);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">
+          Consumers I<br><span style="font-weight:400;color:rgba(180,40,40,0.7);">일반 소비자</span>
+        </div>
+        <div style="font-size:0.7rem;color:var(--mid);line-height:1.55;">${um.c1}</div>
+        <div style="font-size:0.7rem;font-weight:500;color:var(--text);margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border);">${um.c1dir}</div>
       </div>
-      <div style="font-size:0.72rem;color:var(--mid);line-height:1.6;">${um.c1}</div>
-      <div style="font-size:0.72rem;font-weight:500;color:var(--text);margin-top:0.3rem;">→ ${um.c1dir}</div>
-    </div>
-    <div class="fb-consumer" style="border-left:3px solid rgba(50,100,200,0.7);padding-left:0.65rem;">
-      <div style="font-size:0.63rem;font-weight:500;color:rgba(40,70,180,0.9);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">
-        ● Consumers II — 스페셜티 소비자
+      <div style="border-left:3px solid rgba(50,130,80,0.75);padding-left:0.6rem;">
+        <div style="font-size:0.6rem;font-weight:500;color:rgba(30,110,60,0.95);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">
+          Consumers II-A<br><span style="font-weight:400;color:rgba(30,110,60,0.7);">스페셜티 · 산미파</span>
+        </div>
+        <div style="font-size:0.7rem;color:var(--mid);line-height:1.55;">${um.c2a}</div>
+        <div style="font-size:0.7rem;font-weight:500;color:var(--text);margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border);">${um.c2adir}</div>
       </div>
-      <div style="font-size:0.72rem;color:var(--mid);line-height:1.6;">${um.c2}</div>
-      <div style="font-size:0.72rem;font-weight:500;color:var(--text);margin-top:0.3rem;">→ ${um.c2dir}</div>
+      <div style="border-left:3px solid rgba(50,80,180,0.75);padding-left:0.6rem;">
+        <div style="font-size:0.6rem;font-weight:500;color:rgba(40,60,170,0.95);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">
+          Consumers II-B<br><span style="font-weight:400;color:rgba(40,60,170,0.7);">스페셜티 · 다크파</span>
+        </div>
+        <div style="font-size:0.7rem;color:var(--mid);line-height:1.55;">${um.c2b}</div>
+        <div style="font-size:0.7rem;font-weight:500;color:var(--text);margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border);">${um.c2bdir}</div>
+      </div>
     </div>`;
 }
 
