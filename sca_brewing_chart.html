@@ -358,6 +358,37 @@ function ucdRatioLine(Rbrew){ return ratioLine(Rbrew); }
 const UCD_RATIOS=[11,12,13,14,15,16,17,18]; // g/g brew ratio
 
 // ──────────────────────────────────────────────
+// 목표점 계산 헬퍼
+// 비율선(Rbrew)이 이상 구간과 교차하는 중간점을 구함
+// 교차 없으면 구간 경계에서 가장 가까운 점 반환
+// ──────────────────────────────────────────────
+function calcTarget(Rbrew, RABS, peMin, peMax, tdsMin, tdsMax){
+  // 비율선 위에서 TDS → PE 변환: PE = TDS/(1-TDS) × (Rbrew-RABS)
+  // 이상 구간(peMin~peMax, tdsMin~tdsMax) 내에서 교차점 탐색
+  const pts = [];
+  for(let tds=tdsMin; tds<=tdsMax+0.001; tds+=0.001){
+    const pe = (tds/100)/(1-tds/100) * (Rbrew-RABS) * 100;
+    if(pe>=peMin && pe<=peMax) pts.push({pe, tds});
+  }
+  if(pts.length > 0){
+    // 교차 구간의 중간점
+    const mid = pts[Math.floor(pts.length/2)];
+    return {ext: +mid.pe.toFixed(2), tds: +mid.tds.toFixed(4), inIdeal: true};
+  }
+  // 교차 없음 — 비율선이 이상 구간을 벗어남
+  // 비율선 위에서 이상 구간 중심(pe=20, tds=중앙)에 가장 가까운 점으로 클램핑
+  const peCenter = (peMin+peMax)/2;
+  const tdsOnLine = (peCenter/100) / (peCenter/100 + (Rbrew-RABS)) * 100;
+  const tdsClamp = Math.max(tdsMin, Math.min(tdsMax, tdsOnLine));
+  const peClamp = (tdsClamp/100)/(1-tdsClamp/100) * (Rbrew-RABS) * 100;
+  return {
+    ext: +Math.max(peMin, Math.min(peMax, peClamp)).toFixed(2),
+    tds: +tdsClamp.toFixed(4),
+    inIdeal: false
+  };
+}
+
+// ──────────────────────────────────────────────
 // STATE & RENDER
 // ──────────────────────────────────────────────
 let scaChart=null;
@@ -486,15 +517,15 @@ function buildSCA(s){
     data:[{x:17,y:1.10},{x:23,y:1.10},{x:23,y:1.50},{x:17,y:1.50},{x:17,y:1.10}],
     showLine:true,fill:false,borderColor:'rgba(135,185,220,0.6)',borderWidth:1,borderDash:[4,3],pointRadius:0,order:14});
 
-  // 레시피 기준점: 동일한 비율선(Rbrew) 위 수율 PE=20% 지점
-  const idealExt = 20;
-  const peDecimal = idealExt / 100;
-  const rTDSfmt = +((peDecimal / (peDecimal + (s.Rbrew - s.RABS))) * 100).toFixed(4);
-  const SCA_TARGET_EXT = idealExt, SCA_TARGET_TDS = rTDSfmt;
+  // 레시피 기준점: 비율선이 SCA Ideal 구간(PE 18~22%, TDS 1.15~1.45%)과 교차하는 중간점
+  const scaTarget = calcTarget(s.Rbrew, s.RABS, 18, 22, 1.15, 1.45);
+  const SCA_TARGET_EXT = scaTarget.ext;
+  const SCA_TARGET_TDS = scaTarget.tds;
 
-  // 레시피 기준점은 항상 표시 (PE=20%는 항상 차트 범위 내)
-  ds.push({type:'scatter',label:'레시피',data:[{x:idealExt, y:rTDSfmt}],
-    backgroundColor:'#3d6b2f',borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
+  // 레시피 기준점 표시 (교차 있으면 초록, 없으면 회색으로 구분)
+  ds.push({type:'scatter',label:'레시피',data:[{x:SCA_TARGET_EXT, y:SCA_TARGET_TDS}],
+    backgroundColor: scaTarget.inIdeal ? '#3d6b2f' : '#888888',
+    borderColor:'#fff',borderWidth:2.5,pointRadius:7,order:2});
 
   // 내 커피 + 화살표: 수율이 차트 범위(13~27%) 안일 때만 표시
   const inRange = s.hT && s.ext >= 13 && s.ext <= 27;
@@ -531,9 +562,17 @@ function buildSCA(s){
         lb.t.split('\n').forEach((l,i,ar)=>ctx.fillText(l,x.getPixelForValue(lb.ex),y.getPixelForValue(lb.td)+(i-(ar.length-1)/2)*11));
         ctx.restore();
       });
-      // 비율선 라벨
+      // 비율선 라벨 — RATIOS는 g/L 단위
       ctx.save();ctx.font='400 7.5px '+font;ctx.fillStyle='rgba(135,185,220,0.8)';ctx.textAlign='left';
-      RATIOS.forEach(r=>{const te=(1/r)*26.5;if(te<0.90||te>1.81)return;ctx.fillText('1:'+r,x.getPixelForValue(26.5)+3,y.getPixelForValue(te)+3);});
+      RATIOS.forEach(gL=>{
+        // g/L → Rbrew(g/g): Rbrew = 1000/gL
+        const Rb = 1000/gL;
+        // 비율선이 x=26.5(PE%)일 때 TDS: TDS = PE/(PE+(Rb-2.1))
+        const peAt265 = 26.5/100;
+        const te = peAt265/(peAt265+(Rb-2.1))*100;
+        if(te<0.90||te>1.81) return;
+        ctx.fillText(gL+'g/L', x.getPixelForValue(26.5)+3, y.getPixelForValue(te)+3);
+      });
       ctx.restore();
       // 화살촉 — 범위 안일 때만
       if(s.hT && zKey!=='ideal' && s.ext>=13 && s.ext<=27){
@@ -811,13 +850,10 @@ function buildUCD(s){
   ctx.fillStyle='rgba(30,60,180,0.90)';
   ctx.fillText('Consumers II', px(24.0), py(1.28));
 
-  // ── 레시피 기준점 + 화살표 목표: 동일한 비율선(Rbrew) 위 PE=20% 지점 ──
-  // 논문 역공식: TDS = PE / (PE + (Rbrew - 2.1)) × 100
-  const UCD_IDEAL_EXT = 20;
-  const ucdPeD = UCD_IDEAL_EXT / 100;
-  const UCD_RTDS = +((ucdPeD / (ucdPeD + (s.Rbrew - s.RABS))) * 100).toFixed(4);
-  const UCD_TARGET_EXT = UCD_IDEAL_EXT;
-  const UCD_TARGET_TDS = UCD_RTDS;
+  // ── 레시피 기준점: 비율선이 UCD Classic Standard(PE 18~22%, TDS 1.15~1.35%)와 교차하는 중간점 ──
+  const ucdTarget = calcTarget(s.Rbrew, s.RABS, 18, 22, 1.15, 1.35);
+  const UCD_TARGET_EXT = ucdTarget.ext;
+  const UCD_TARGET_TDS = ucdTarget.tds;
 
   // ── 화살표 + 내 커피: 수율이 차트 범위(13~27%) 안일 때만 표시 ──
   const ucdInRange = s.hT && s.ext >= 13 && s.ext <= 27;
@@ -845,11 +881,12 @@ function buildUCD(s){
     }
   }
 
-  // ── 레시피 기준점 (초록, 비율선 위) ──
-  if(UCD_RTDS >= YMIN && UCD_RTDS <= YMAX){
+  // ── 레시피 기준점 (교차 있으면 초록, 없으면 회색) ──
+  if(UCD_TARGET_TDS >= YMIN && UCD_TARGET_TDS <= YMAX){
     ctx.beginPath();
-    ctx.arc(px(UCD_IDEAL_EXT), py(UCD_RTDS), 7, 0, Math.PI*2);
-    ctx.fillStyle='#3d6b2f'; ctx.fill();
+    ctx.arc(px(UCD_TARGET_EXT), py(UCD_TARGET_TDS), 7, 0, Math.PI*2);
+    ctx.fillStyle = ucdTarget.inIdeal ? '#3d6b2f' : '#888888';
+    ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
   }
 
