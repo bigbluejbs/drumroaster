@@ -171,7 +171,10 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
         margin-bottom:0.4rem;font-size:0.63rem;color:var(--mid);">
         <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e24b4a;border:1.5px solid #fff;box-shadow:0 0 0 1px #e24b4a;vertical-align:middle;margin-right:3px;"></span>현재 내 커피</span>
         <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d4a017;border:1.5px solid #fff;box-shadow:0 0 0 1px #d4a017;vertical-align:middle;margin-right:3px;"></span>목표 (이상 구간)</span>
-        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #2060c0;vertical-align:middle;margin-right:3px;"></span>물량 조정 후 예상</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#aaaaaa;border:1.5px solid #fff;box-shadow:0 0 0 1px #aaa;vertical-align:middle;margin-right:3px;"></span>목표 (비율 변경 필요)</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #2060c0;vertical-align:middle;margin-right:3px;"></span>물량 조정 후</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #d06010;vertical-align:middle;margin-right:3px;"></span>원두량 조정 후</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #8020b0;vertical-align:middle;margin-right:3px;"></span>동시 조정 후</span>
       </div>
       <div class="chart-wrap"><canvas id="scaC"></canvas></div>
     </div>
@@ -193,7 +196,10 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
         margin-bottom:0.4rem;font-size:0.63rem;color:var(--mid);">
         <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#e24b4a;border:1.5px solid #fff;box-shadow:0 0 0 1px #e24b4a;vertical-align:middle;margin-right:3px;"></span>현재 내 커피</span>
         <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#d4a017;border:1.5px solid #fff;box-shadow:0 0 0 1px #d4a017;vertical-align:middle;margin-right:3px;"></span>목표 (이상 구간)</span>
-        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #2060c0;vertical-align:middle;margin-right:3px;"></span>물량 조정 후 예상</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#aaaaaa;border:1.5px solid #fff;box-shadow:0 0 0 1px #aaa;vertical-align:middle;margin-right:3px;"></span>목표 (비율 변경 필요)</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #2060c0;vertical-align:middle;margin-right:3px;"></span>물량 조정 후</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #d06010;vertical-align:middle;margin-right:3px;"></span>원두량 조정 후</span>
+        <span><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #8020b0;vertical-align:middle;margin-right:3px;"></span>동시 조정 후</span>
       </div>
       <div class="chart-wrap" style="position:relative;">
         <canvas id="ucdC" style="width:100%;height:100%;display:block;"></canvas>
@@ -452,30 +458,68 @@ function getState(){
   const scaZ = (hT && ext !== null && !peOutOfRange) ? scaClassify(tRaw, ext) : null;
   const ucdZ = (hT && ext !== null && !peOutOfRange) ? ucdClassify(tRaw, ext) : null;
 
-  // 물량 조정 후 예상 위치 계산
-  // SCA 이상 중심 통과 Rbrew: PE=20%, TDS=1.30
+  // ── 이상 구간 중심 Rbrew 계산 ──
+  // SCA Ideal 중심: PE=20%, TDS=1.30 → Rbrew = PE/(TDS/(1-TDS)) + 2.1
   const scaIdealRbrew = (20/100)/((1.30/100)/(1-1.30/100)) + 2.1;
-  // UCD 이상 중심 통과 Rbrew: PE=20%, TDS=1.25
+  // UCD Classic 중심: PE=20%, TDS=1.25
   const ucdIdealRbrew = (20/100)/((1.25/100)/(1-1.25/100)) + 2.1;
-  const scaTargetWater = Math.round(scaIdealRbrew * dose);
-  const ucdTargetWater = Math.round(ucdIdealRbrew * dose);
 
-  // 현재 TDS로 권장 물량에서의 수율 예상
-  let scaPredExt = null, ucdPredExt = null;
-  if(hT && tRaw){
-    const td = tRaw/100;
-    scaPredExt = td/(1-td) * (scaIdealRbrew - RABS) * 100;
-    ucdPredExt = td/(1-td) * (ucdIdealRbrew - RABS) * 100;
-  }
+  // ── 시나리오 1: 물량 조정 (원두 고정) ──
+  const scaWaterAdj  = Math.round(scaIdealRbrew * dose);
+  const ucdWaterAdj  = Math.round(ucdIdealRbrew * dose);
+
+  // ── 시나리오 2: 원두량 조정 (물량 고정) ──
+  const scaDoseAdj   = +(water / scaIdealRbrew).toFixed(1);
+  const ucdDoseAdj   = +(water / ucdIdealRbrew).toFixed(1);
+
+  // ── 시나리오 3: 동시 조정 (현재 비율 유지, 원두↑ → 물도 같이↑) ──
+  // 비율 유지 = Rbrew 동일, TDS를 이상 중심으로 맞춤
+  // 현재 TDS로 PE=20% 달성하려면 → Rbrew 변경 필요
+  // 대신 비율 유지하면서 "원두를 늘려 동일 비율에서 TDS를 올리는" 것
+  // TDS_ideal = 1.30(SCA)/1.25(UCD) → 같은 비율선에서 그 TDS가 나오려면?
+  // 불가: 비율선은 Rbrew 고정이므로 TDS는 PE에 따라 결정됨
+  // 따라서 동시조정 = "이상 TDS를 목표로 원두 늘리고, 비율 유지하도록 물도 늘리기"
+  // dose_new = dose * (1.30/tRaw) [SCA], water_new = Rbrew * dose_new
+  const scaDoseSimul = hT && tRaw ? +(dose * (1.30/tRaw)).toFixed(1) : dose;
+  const scaWaterSimul= Math.round(Rbrew * scaDoseSimul);
+  const ucdDoseSimul = hT && tRaw ? +(dose * (1.25/tRaw)).toFixed(1) : dose;
+  const ucdWaterSimul= Math.round(Rbrew * ucdDoseSimul);
+
+  // ── 각 시나리오별 예상 수율 계산 (현재 TDS 기준) ──
+  const predPE = (Rb, td) => isFinite(Rb) && Rb > RABS && td
+    ? (td/100)/(1-td/100) * (Rb - RABS) * 100 : null;
+
+  const scaPredExt       = hT ? predPE(scaIdealRbrew, tRaw) : null;   // 물량 조정
+  const ucdPredExt       = hT ? predPE(ucdIdealRbrew, tRaw) : null;
+  const scaDosePredExt   = hT ? predPE(water/scaDoseAdj, tRaw) : null; // 원두 조정
+  const ucdDosePredExt   = hT ? predPE(water/ucdDoseAdj, tRaw) : null;
+  // 동시조정: 비율 유지이므로 PE는 현재와 동일, TDS만 변화 → 차트상 y축만 이동
+  const scaSimulTDS      = hT ? 1.30 : null;  // 목표 TDS로 이동
+  const ucdSimulTDS      = hT ? 1.25 : null;
+  const scaSimulExt      = hT ? predPE(Rbrew, scaSimulTDS) : null;
+  const ucdSimulExt      = hT ? predPE(Rbrew, ucdSimulTDS) : null;
 
   return {
     dose, water, bVol, tRaw: hT ? tRaw : null,
     hT, ext, scaZ, ucdZ,
     ratio: Rbrew, Rbrew, RABS,
     errors, hasError, peOutOfRange,
+    // 이상 Rbrew
     scaIdealRbrew, ucdIdealRbrew,
-    scaTargetWater, ucdTargetWater,
-    scaPredExt, ucdPredExt
+    // 시나리오 1: 물량 조정
+    scaWaterAdj, ucdWaterAdj,
+    scaPredExt, ucdPredExt,
+    // 시나리오 2: 원두량 조정
+    scaDoseAdj, ucdDoseAdj,
+    scaDosePredExt, ucdDosePredExt,
+    // 시나리오 3: 동시 조정
+    scaDoseSimul, scaWaterSimul,
+    ucdDoseSimul, ucdWaterSimul,
+    scaSimulExt, scaSimulTDS,
+    ucdSimulExt, ucdSimulTDS,
+    // 하위호환 (기존 참조)
+    scaTargetWater: scaWaterAdj,
+    ucdTargetWater: ucdWaterAdj,
   };
 }
 
@@ -521,13 +565,24 @@ function render(){
   buildFeedback(s);
   buildDiffNote(s);
 
-  // 물량 조정 후 예상점 범례 동적 표시/숨김
-  const showPred = s.hT && s.scaPredExt !== null && Math.abs(s.scaTargetWater - s.water) > 5;
+  // 예상점 범례 동적 표시/숨김
+  const showWater = s.hT && s.scaPredExt !== null && Math.abs(s.scaWaterAdj - s.water) > 5;
+  const showDose  = s.hT && s.scaDosePredExt !== null && Math.abs(s.scaDoseAdj - s.dose) > 0.5;
+  const showSimul = s.hT && s.scaSimulExt !== null
+    && (Math.abs(s.scaDoseSimul-s.dose)>0.5 || Math.abs(s.scaWaterSimul-s.water)>5);
+  const scaT = s.hT ? calcTarget(s.Rbrew, s.RABS, 18, 22, 1.15, 1.45) : null;
+  const showGrey = s.hT && scaT && !scaT.inIdeal;
+
   ['sca-legend','ucd-legend'].forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
-    const predSpan = el.querySelector('span:last-child');
-    if(predSpan) predSpan.style.opacity = showPred ? '1' : '0.3';
+    const spans = el.querySelectorAll('span');
+    // spans[0]=현재, spans[1]=목표노랑, spans[2]=목표회색, spans[3]=물량, spans[4]=원두, spans[5]=동시
+    if(spans[1]) spans[1].style.opacity = (s.hT && !showGrey) ? '1' : '0.3';
+    if(spans[2]) spans[2].style.opacity = showGrey  ? '1' : '0.3';
+    if(spans[3]) spans[3].style.opacity = showWater ? '1' : '0.3';
+    if(spans[4]) spans[4].style.opacity = showDose  ? '1' : '0.3';
+    if(spans[5]) spans[5].style.opacity = showSimul ? '1' : '0.3';
   });
 }
 
@@ -576,16 +631,37 @@ function buildSCA(s){
     data:[{x:+s.ext.toFixed(2),y:s.tRaw}],
     backgroundColor:'#e24b4a',borderColor:'#fff',borderWidth:2.5,pointRadius:10,pointHoverRadius:12,order:0});
 
-  // 물량 조정 후 예상 위치 (파란 점) — 현재와 다를 때만
-  if(s.hT && s.scaPredExt !== null && Math.abs(s.scaTargetWater - s.water) > 5){
+  // 물량 조정 후 예상 위치 (파란 삼각형)
+  if(s.hT && s.scaPredExt !== null && Math.abs(s.scaWaterAdj - s.water) > 5){
     const predInRange = s.scaPredExt >= 13 && s.scaPredExt <= 27;
-    const predTDS = s.tRaw; // TDS는 동일 (같은 커피, 같은 추출)
-    if(predInRange && predTDS >= 0.88 && predTDS <= 1.82){
+    if(predInRange && s.tRaw >= 0.88 && s.tRaw <= 1.82){
       ds.push({type:'scatter',label:'물량 조정 후',
-        data:[{x:+s.scaPredExt.toFixed(2), y:predTDS}],
+        data:[{x:+s.scaPredExt.toFixed(2), y:s.tRaw}],
         backgroundColor:'#2060c0',borderColor:'#fff',borderWidth:2,
-        pointRadius:7,pointHoverRadius:9,order:1,
-        pointStyle:'triangle'});
+        pointRadius:7,pointHoverRadius:9,order:1,pointStyle:'triangle'});
+    }
+  }
+
+  // 원두량 조정 후 예상 위치 (주황 삼각형)
+  if(s.hT && s.scaDosePredExt !== null && Math.abs(s.scaDoseAdj - s.dose) > 0.5){
+    const predInRange = s.scaDosePredExt >= 13 && s.scaDosePredExt <= 27;
+    if(predInRange && s.tRaw >= 0.88 && s.tRaw <= 1.82){
+      ds.push({type:'scatter',label:'원두량 조정 후',
+        data:[{x:+s.scaDosePredExt.toFixed(2), y:s.tRaw}],
+        backgroundColor:'#d06010',borderColor:'#fff',borderWidth:2,
+        pointRadius:7,pointHoverRadius:9,order:1,pointStyle:'triangle'});
+    }
+  }
+
+  // 동시 조정 후 예상 위치 (보라 삼각형)
+  if(s.hT && s.scaSimulExt !== null && s.scaSimulTDS !== null
+     && (Math.abs(s.scaDoseSimul-s.dose)>0.5 || Math.abs(s.scaWaterSimul-s.water)>5)){
+    const predInRange = s.scaSimulExt >= 13 && s.scaSimulExt <= 27;
+    if(predInRange && s.scaSimulTDS >= 0.88 && s.scaSimulTDS <= 1.82){
+      ds.push({type:'scatter',label:'동시 조정 후',
+        data:[{x:+s.scaSimulExt.toFixed(2), y:s.scaSimulTDS}],
+        backgroundColor:'#8020b0',borderColor:'#fff',borderWidth:2,
+        pointRadius:7,pointHoverRadius:9,order:1,pointStyle:'triangle'});
     }
   }
 
@@ -645,6 +721,17 @@ function buildSCA(s){
           ctx.fillStyle='rgba(226,75,74,0.85)'; ctx.fill();
           ctx.restore();
         }
+      }
+      // 회색점 안내 — 비율선이 이상 구간 통과 못할 때
+      if(s.hT && !scaTarget.inIdeal && s.ext>=13 && s.ext<=27){
+        const tx2=x.getPixelForValue(SCA_TARGET_EXT), ty2=y.getPixelForValue(SCA_TARGET_TDS);
+        ctx.save();
+        ctx.textAlign='center';
+        ctx.font=`500 8px ${font}`;
+        ctx.fillStyle='rgba(100,100,100,0.85)';
+        ctx.fillText('⚠ 현재 비율로는', tx2, ty2-14);
+        ctx.fillText('이상 구간 진입 불가', tx2, ty2-4);
+        ctx.restore();
       }
       // 범위 밖 경고
       if(s.hT && (s.ext<13 || s.ext>27)){
@@ -934,13 +1021,24 @@ function buildUCD(s){
     }
   }
 
-  // ── 레시피 기준점 (교차 있으면 초록, 없으면 회색) ──
+  // ── 레시피 기준점 (교차 있으면 노란, 없으면 회색) ──
   if(UCD_TARGET_TDS >= YMIN && UCD_TARGET_TDS <= YMAX){
     ctx.beginPath();
     ctx.arc(px(UCD_TARGET_EXT), py(UCD_TARGET_TDS), 7, 0, Math.PI*2);
     ctx.fillStyle = ucdTarget.inIdeal ? '#d4a017' : '#aaaaaa';
     ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
+
+    // 회색점 안내 텍스트
+    if(!ucdTarget.inIdeal && ucdInRange){
+      ctx.save();
+      ctx.textAlign='center';
+      ctx.font=`500 7.5px 'Noto Sans KR',sans-serif`;
+      ctx.fillStyle='rgba(90,90,90,0.90)';
+      ctx.fillText('⚠ 현재 비율로는', px(UCD_TARGET_EXT), py(UCD_TARGET_TDS)-13);
+      ctx.fillText('이상 구간 진입 불가', px(UCD_TARGET_EXT), py(UCD_TARGET_TDS)-4);
+      ctx.restore();
+    }
   }
 
   // ── 내 커피 점: 범위 안일 때만 ──
@@ -956,23 +1054,51 @@ function buildUCD(s){
   }
 
   // ── 물량 조정 후 예상 위치 (파란 삼각형) ──
-  if(s.hT && s.ucdPredExt !== null && Math.abs(s.ucdTargetWater - s.water) > 5){
+  if(s.hT && s.ucdPredExt !== null && Math.abs(s.ucdWaterAdj - s.water) > 5){
     const predPE = s.ucdPredExt;
-    const predTDS = s.tRaw;
-    if(predPE >= XMIN && predPE <= XMAX && predTDS >= YMIN && predTDS <= YMAX){
-      const bx = px(predPE), by = py(predTDS), r = 8;
+    if(predPE >= XMIN && predPE <= XMAX && s.tRaw >= YMIN && s.tRaw <= YMAX){
+      const bx=px(predPE), by=py(s.tRaw), r=8;
       ctx.beginPath();
-      ctx.moveTo(bx, by - r);
-      ctx.lineTo(bx + r*0.866, by + r*0.5);
-      ctx.lineTo(bx - r*0.866, by + r*0.5);
+      ctx.moveTo(bx,by-r); ctx.lineTo(bx+r*0.866,by+r*0.5); ctx.lineTo(bx-r*0.866,by+r*0.5);
       ctx.closePath();
       ctx.fillStyle='#2060c0'; ctx.fill();
       ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
-      // 라벨
-      ctx.font=`500 7.5px 'Noto Sans KR',sans-serif`;
-      ctx.fillStyle='rgba(20,60,180,0.85)';
-      ctx.textAlign='center';
-      ctx.fillText('물량 조정 후', bx, by - r - 4);
+      ctx.font=`500 7px 'Noto Sans KR',sans-serif`;
+      ctx.fillStyle='rgba(20,60,180,0.85)'; ctx.textAlign='center';
+      ctx.fillText('물량↑↓', bx, by-r-3);
+    }
+  }
+
+  // ── 원두량 조정 후 예상 위치 (주황 삼각형) ──
+  if(s.hT && s.ucdDosePredExt !== null && Math.abs(s.ucdDoseAdj - s.dose) > 0.5){
+    const predPE = s.ucdDosePredExt;
+    if(predPE >= XMIN && predPE <= XMAX && s.tRaw >= YMIN && s.tRaw <= YMAX){
+      const bx=px(predPE), by=py(s.tRaw), r=8;
+      ctx.beginPath();
+      ctx.moveTo(bx,by-r); ctx.lineTo(bx+r*0.866,by+r*0.5); ctx.lineTo(bx-r*0.866,by+r*0.5);
+      ctx.closePath();
+      ctx.fillStyle='#d06010'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+      ctx.font=`500 7px 'Noto Sans KR',sans-serif`;
+      ctx.fillStyle='rgba(180,80,10,0.85)'; ctx.textAlign='center';
+      ctx.fillText('원두↑↓', bx, by-r-3);
+    }
+  }
+
+  // ── 동시 조정 후 예상 위치 (보라 삼각형) ──
+  if(s.hT && s.ucdSimulExt !== null && s.ucdSimulTDS !== null
+     && (Math.abs(s.ucdDoseSimul-s.dose)>0.5 || Math.abs(s.ucdWaterSimul-s.water)>5)){
+    const predPE = s.ucdSimulExt, predTDS = s.ucdSimulTDS;
+    if(predPE >= XMIN && predPE <= XMAX && predTDS >= YMIN && predTDS <= YMAX){
+      const bx=px(predPE), by=py(predTDS), r=8;
+      ctx.beginPath();
+      ctx.moveTo(bx,by-r); ctx.lineTo(bx+r*0.866,by+r*0.5); ctx.lineTo(bx-r*0.866,by+r*0.5);
+      ctx.closePath();
+      ctx.fillStyle='#8020b0'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+      ctx.font=`500 7px 'Noto Sans KR',sans-serif`;
+      ctx.fillStyle='rgba(100,20,150,0.85)'; ctx.textAlign='center';
+      ctx.fillText('동시조정', bx, by-r-3);
     }
   }
 
@@ -1074,22 +1200,32 @@ function buildFeedback(s){
   document.getElementById('sca-fb').innerHTML=`
     <div class="fb-item"><strong>분쇄도</strong>${sm.fbG}</div>
     <div class="fb-item"><strong>원두 비율</strong>${sm.fbD}</div>
-    <div class="fb-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:0.4rem;margin-top:0.1rem;
-      ${scaRatioMiss?'background:#fff8f0;border-radius:6px;padding:0.5rem 0.6rem;border:1px solid rgba(180,100,20,0.25);':''}">
-      <strong style="${scaRatioMiss?'color:#b05010;':''}">물량 조정${scaRatioMiss?' ← 필수':''}</strong>
-      ${sm.fbW}
-      ${Math.abs(s.scaTargetWater - s.water) > 5 ? `
-        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;">
-          <span style="font-size:0.68rem;color:${scaRatioMiss?'#b05010':'var(--muted)'};">
-            💡 권장 물량: <strong>${s.scaTargetWater}ml</strong> (비율 1:${s.scaIdealRbrew.toFixed(1)})
-          </span>
-          <button onclick="document.getElementById('water').value=${s.scaTargetWater};render();"
-            style="font-size:0.65rem;padding:0.2rem 0.55rem;border-radius:5px;border:1px solid ${scaRatioMiss?'#c07020':'var(--accent)'};
-              background:${scaRatioMiss?'#fff3e8':'#f0f7ec'};color:${scaRatioMiss?'#b05010':'var(--accent)'};
-              cursor:pointer;font-family:inherit;white-space:nowrap;">
-            ${s.scaTargetWater}ml 적용 →
-          </button>
-        </div>` : ''}
+    <div class="fb-item" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:0.5rem;margin-top:0.1rem;">
+      <strong>레시피 조정 시뮬레이션</strong>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.35rem;">
+        ${Math.abs(s.scaWaterAdj-s.water)>5?`
+        <button onclick="document.getElementById('water').value=${s.scaWaterAdj};render();"
+          style="font-size:0.65rem;padding:0.22rem 0.6rem;border-radius:5px;
+            border:1px solid #2060c0;background:#eef2ff;color:#2060c0;
+            cursor:pointer;font-family:inherit;">
+          🔵 물 ${s.scaWaterAdj}ml (1:${s.scaIdealRbrew.toFixed(1)})
+        </button>`:''}
+        ${Math.abs(s.scaDoseAdj-s.dose)>0.5?`
+        <button onclick="document.getElementById('dose').value=${s.scaDoseAdj};render();"
+          style="font-size:0.65rem;padding:0.22rem 0.6rem;border-radius:5px;
+            border:1px solid #d06010;background:#fff3e8;color:#d06010;
+            cursor:pointer;font-family:inherit;">
+          🟠 원두 ${s.scaDoseAdj}g
+        </button>`:''}
+        ${(Math.abs(s.scaDoseSimul-s.dose)>0.5||Math.abs(s.scaWaterSimul-s.water)>5)?`
+        <button onclick="document.getElementById('dose').value=${s.scaDoseSimul};document.getElementById('water').value=${s.scaWaterSimul};render();"
+          style="font-size:0.65rem;padding:0.22rem 0.6rem;border-radius:5px;
+            border:1px solid #8020b0;background:#f5eeff;color:#8020b0;
+            cursor:pointer;font-family:inherit;">
+          🟣 동시 원두 ${s.scaDoseSimul}g + 물 ${s.scaWaterSimul}ml
+        </button>`:''}
+      </div>
+      <div style="font-size:0.63rem;color:var(--muted);margin-top:0.3rem;">버튼 클릭 시 입력값이 자동 변경되고 차트가 업데이트됩니다.</div>
     </div>
     <div class="fb-note"><strong>전략</strong>  ${sm.note}</div>`;
 
@@ -1105,20 +1241,23 @@ function buildFeedback(s){
     <div style="grid-column:1/-1;font-size:0.73rem;color:var(--mid);line-height:1.6;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
       <strong style="color:var(--text);">현재 위치</strong>  ${um.note}
       ${flavorNote?`<span style="font-size:0.65rem;color:var(--muted);"> — 플레이버: </span>${flavorNote}`:''}
-      <span style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;flex-wrap:wrap;">
-        <span style="font-size:0.68rem;${ucdRatioMiss?'color:#b05010;font-weight:500;':'color:var(--muted);'}">
-          물량 조정: ${um.fbW}
-          ${ucdRatioMiss?` — 💡 권장 <strong>${s.ucdTargetWater}ml</strong> (비율 1:${s.ucdIdealRbrew.toFixed(1)})`:''}
-        </span>
-        ${Math.abs(s.ucdTargetWater - s.water) > 5 ? `
-          <button onclick="document.getElementById('water').value=${s.ucdTargetWater};render();"
-            style="font-size:0.65rem;padding:0.2rem 0.55rem;border-radius:5px;
-              border:1px solid ${ucdRatioMiss?'#c07020':'var(--accent)'};
-              background:${ucdRatioMiss?'#fff3e8':'#f0f7ec'};
-              color:${ucdRatioMiss?'#b05010':'var(--accent)'};
-              cursor:pointer;font-family:inherit;white-space:nowrap;">
-            ${s.ucdTargetWater}ml 적용 →
-          </button>` : ''}
+      <span style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;">
+        <span style="font-size:0.67rem;color:var(--mid);">레시피 시뮬레이션:</span>
+        ${Math.abs(s.ucdWaterAdj-s.water)>5?`
+        <button onclick="document.getElementById('water').value=${s.ucdWaterAdj};render();"
+          style="font-size:0.63rem;padding:0.18rem 0.5rem;border-radius:4px;
+            border:1px solid #2060c0;background:#eef2ff;color:#2060c0;
+            cursor:pointer;font-family:inherit;">🔵 물 ${s.ucdWaterAdj}ml</button>`:''}
+        ${Math.abs(s.ucdDoseAdj-s.dose)>0.5?`
+        <button onclick="document.getElementById('dose').value=${s.ucdDoseAdj};render();"
+          style="font-size:0.63rem;padding:0.18rem 0.5rem;border-radius:4px;
+            border:1px solid #d06010;background:#fff3e8;color:#d06010;
+            cursor:pointer;font-family:inherit;">🟠 원두 ${s.ucdDoseAdj}g</button>`:''}
+        ${(Math.abs(s.ucdDoseSimul-s.dose)>0.5||Math.abs(s.ucdWaterSimul-s.water)>5)?`
+        <button onclick="document.getElementById('dose').value=${s.ucdDoseSimul};document.getElementById('water').value=${s.ucdWaterSimul};render();"
+          style="font-size:0.63rem;padding:0.18rem 0.5rem;border-radius:4px;
+            border:1px solid #8020b0;background:#f5eeff;color:#8020b0;
+            cursor:pointer;font-family:inherit;">🟣 동시 ${s.ucdDoseSimul}g+${s.ucdWaterSimul}ml</button>`:''}
       </span>
     </div>
     <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-top:0.1rem;">
