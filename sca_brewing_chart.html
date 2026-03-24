@@ -131,7 +131,7 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
     <div class="cg"><label>원두</label><input type="number" id="dose" value="15" min="1" max="100" step="0.5"><div class="un">g</div></div>
     <div class="cg"><label>물</label><input type="number" id="water" value="250" min="50" max="2000" step="5"><div class="un">ml</div></div>
     <div class="cdiv"></div>
-    <div class="cg"><label>추출 용량 <span style="font-weight:400;color:var(--muted);">(선택)</span></label><input type="number" id="brew" placeholder="= 물량" min="10" max="2000" step="5"><div class="un">ml — 비우면 물량으로 계산</div></div>
+    <div class="cg"><label>추출 용량 <span style="font-weight:400;color:var(--muted);">(선택)</span></label><input type="number" id="brew" placeholder="자동 계산" min="10" max="2000" step="5"><div class="un">ml — 비우면 물량 − 흡수량으로 자동 계산</div></div>
   </div>
 </div>
 
@@ -416,22 +416,35 @@ function getState(){
   const dose  = parseFloat(document.getElementById('dose').value)||15;
   const water = parseFloat(document.getElementById('water').value)||250;
   const bRaw  = parseFloat(document.getElementById('brew').value);
-  const bVol  = (!isNaN(bRaw)&&bRaw>0) ? bRaw : water;
-  const tRaw  = parseFloat(document.getElementById('tds').value);
 
   const RABS  = 2.1;
   const Rbrew = water / dose;
 
+  // 추출량 자동 계산: 미입력 시 물량 - 원두 흡수량 (Rabs × dose)
+  const absorbedWater = RABS * dose;
+  const bVolAuto = Math.max(0, water - absorbedWater);
+  const bVol = (!isNaN(bRaw) && bRaw > 0) ? bRaw : bVolAuto;
+
+  const tRaw  = parseFloat(document.getElementById('tds').value);
+
   // ── 입력 유효성 검사 ──
   const errors = [];
 
-  // ① 추출 용량 > 물량 (물리적으로 불가)
-  if(!isNaN(bRaw) && bRaw > 0 && bRaw > water)
-    errors.push({code:'BVOL_GT_WATER', msg:`추출 용량(${bRaw}ml)이 투입 물량(${water}ml)보다 많습니다.`});
+  // ① 추출 용량 ≥ 물량 (원두가 반드시 일부 흡수 — 물리적으로 불가)
+  const maxBVol = water - absorbedWater;
+  if(!isNaN(bRaw) && bRaw > 0 && bRaw >= water)
+    errors.push({code:'BVOL_GT_WATER',
+      msg:`추출 용량(${bRaw}ml)이 투입 물량(${water}ml) 이상입니다. 원두 ${dose}g이 최소 ${absorbedWater.toFixed(0)}ml를 흡수하므로 추출량은 최대 ${maxBVol.toFixed(0)}ml 이하여야 합니다.`});
+
+  // ① 추출 용량이 이론 최대치 초과 (물량보다는 작지만 흡수량 미반영)
+  if(!isNaN(bRaw) && bRaw > 0 && bRaw < water && bRaw > maxBVol)
+    errors.push({code:'BVOL_TOO_HIGH',
+      msg:`추출 용량(${bRaw}ml)이 이론 최대치(${maxBVol.toFixed(0)}ml)를 초과합니다. 원두 ${dose}g은 약 ${absorbedWater.toFixed(0)}ml를 흡수합니다.`});
 
   // ② Rbrew ≤ Rabs: 공식 자체가 성립 안 됨
   if(Rbrew <= RABS)
-    errors.push({code:'RBREW_TOO_LOW', msg:`물/원두 비율(${Rbrew.toFixed(2)} g/g)이 흡수율(${RABS})보다 낮습니다. 물을 더 추가해주세요.`});
+    errors.push({code:'RBREW_TOO_LOW',
+      msg:`물/원두 비율(${Rbrew.toFixed(2)} g/g)이 흡수율(${RABS})보다 낮습니다. 물을 더 추가해주세요.`});
 
   const hT = !isNaN(tRaw) && tRaw > 0.3 && tRaw < 100;
 
@@ -527,11 +540,15 @@ function render(){
   const s=getState();
 
   // metrics
+  const bVolIsAuto = isNaN(parseFloat(document.getElementById('brew').value)) ||
+                     parseFloat(document.getElementById('brew').value) <= 0;
   document.getElementById('metrics').innerHTML=[
-    {l:'비율',v:`1 : ${s.ratio.toFixed(1)}`,sub:'Coffee : Water'},
-    {l:'원두',v:`${s.dose}g`,sub:'도즈'},
-    {l:'물',v:`${s.water}ml`,sub:'투입량'},
-    {l:'추출량',v:`${s.bVol}ml`,sub:'추출 용량'},
+    {l:'비율',     v:`1 : ${s.ratio.toFixed(1)}`, sub:'Coffee : Water'},
+    {l:'원두',     v:`${s.dose}g`,                sub:'도즈'},
+    {l:'물',       v:`${s.water}ml`,              sub:'투입량'},
+    {l:'추출량',   v:`${s.bVol.toFixed(0)}ml`,    sub: bVolIsAuto
+      ? `추정 (물 - 흡수 ${(s.RABS*s.dose).toFixed(0)}ml)`
+      : '입력값'},
   ].map(i=>`<div class="metric"><div class="ml">${i.l}</div><div class="mv">${i.v}</div><div class="ms">${i.sub}</div></div>`).join('');
 
   // badges + ext — 에러 타입별 처리
@@ -1165,7 +1182,9 @@ function buildFeedback(s){
     const guideLines = s.errors.map(e=>{
       switch(e.code){
         case 'BVOL_GT_WATER':
-          return `<div style="margin-bottom:0.4rem;"><strong>추출 용량 오류</strong><br>추출 용량은 투입 물량보다 작아야 합니다. 드립 과정에서 원두가 물을 일부 흡수하기 때문이에요. 비워두거나 물량보다 작은 값을 입력하세요.</div>`;
+          return `<div style="margin-bottom:0.4rem;"><strong>추출 용량 오류</strong><br>${e.msg}<br>💡 비워두면 자동으로 <strong>${(s.water - s.RABS*s.dose).toFixed(0)}ml</strong>로 계산됩니다.</div>`;
+        case 'BVOL_TOO_HIGH':
+          return `<div style="margin-bottom:0.4rem;"><strong>추출 용량 초과</strong><br>${e.msg}<br>💡 비워두면 자동으로 <strong>${(s.water - s.RABS*s.dose).toFixed(0)}ml</strong>로 계산됩니다.</div>`;
         case 'RBREW_TOO_LOW':
           return `<div style="margin-bottom:0.4rem;"><strong>물/원두 비율 오류</strong><br>현재 비율 1:${s.Rbrew.toFixed(2)} (g/g)은 원두 흡수율(2.1 g/g)보다 낮아 수율 계산이 불가합니다.<br>💡 원두 ${s.dose}g 기준 최소 물량: <strong>${(2.2*s.dose).toFixed(0)}ml</strong> 이상 필요합니다.</div>`;
         case 'TDS_OUT_Y':
