@@ -198,8 +198,8 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
       <span class="col-sub">UC Davis Coffee Center (최신)</span>
     </div>
     <!-- 타겟 소비자 선택 — UC Davis 전용 -->
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;
-      padding:0.6rem 0.8rem;margin-bottom:0.6rem;">
+    <div id="target-panel" style="background:var(--surface);border:2px solid rgba(200,50,50,0.4);border-radius:10px;
+      padding:0.6rem 0.8rem;margin-bottom:0.6rem;transition:border-color 0.25s;">
       <div style="font-size:0.63rem;font-weight:600;color:var(--muted);text-transform:uppercase;
         letter-spacing:0.05em;margin-bottom:0.4rem;">UC Davis — 타겟 소비자</div>
       <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
@@ -220,7 +220,8 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
           중립
         </button>
       </div>
-      <div id="target-desc" style="font-size:0.68rem;color:var(--mid);margin-top:0.35rem;line-height:1.55;"></div>
+      <div id="target-zone-info" style="font-size:0.68rem;font-weight:600;margin-top:0.3rem;"></div>
+      <div id="target-desc" style="font-size:0.67rem;color:var(--mid);margin-top:0.15rem;line-height:1.5;"></div>
     </div>
     <div class="chart-card">
       <div class="card-title">Flavor Zone · Brew Ratio</div>
@@ -476,8 +477,26 @@ function setTarget(t){
     btn.classList.toggle('active', btn.dataset.target === t);
   });
   const tm = TARGET_META[t];
+
+  // 패널 테두리 색 변경
+  const panel = document.getElementById('target-panel');
+  if(panel) panel.style.borderColor = tm.color + '99';
+
+  // 목표 구간 한 줄 표시
+  const zoneInfo = document.getElementById('target-zone-info');
+  if(zoneInfo){
+    const zoneText = {
+      general: `목표 구간: PE ${tm.idealPeMin}~${tm.idealPeMax}%  ·  TDS ${tm.idealTdsMin}~${tm.idealTdsMax}%  —  Sweet/Balanced`,
+      acidic:  `목표 구간: PE ${tm.idealPeMin}~${tm.idealPeMax}%  ·  TDS ${tm.idealTdsMin}~${tm.idealTdsMax}%  —  Sour/Citrus`,
+      dark:    `목표 구간: PE ${tm.idealPeMin}~${tm.idealPeMax}%  ·  TDS ${tm.idealTdsMin}~${tm.idealTdsMax}%  —  Roasted/Earthy`,
+      neutral: `목표 구간: PE ${tm.idealPeMin}~${tm.idealPeMax}%  ·  TDS ${tm.idealTdsMin}~${tm.idealTdsMax}%  —  Classic Standard`,
+    }[t];
+    zoneInfo.innerHTML = `<span style="color:${tm.color};">→ ${zoneText}</span>`;
+  }
+
+  // 설명 텍스트
   document.getElementById('target-desc').innerHTML =
-    `<span style="color:${tm.color};font-weight:500;">${tm.label}</span> — ${tm.desc}`;
+    `${tm.desc}`;
 
   // 범례 목표점 색상 + 라벨 동적 업데이트
   const icon = document.getElementById('legend-target-icon');
