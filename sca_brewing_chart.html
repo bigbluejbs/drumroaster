@@ -794,12 +794,12 @@ const FLAVOR_WORDS=[
 //   좌상단: PE~15~16%, TDS~1.15~1.20% (Citrus/Berry/Dried Fruit 구역)
 //   우측:   PE~23~25%, TDS~1.15~1.25% (Earthy/Roasted/Black Tea 구역)
 const CONSUMER_ELLIPSES=[
-  // Consumers I — 빨간 돔형, lower-left, 세로로 넓음 (원문 Figure 5)
-  {label:'Consumers I', cx:18.5, cy:0.97, rx:3.5, ry:0.19, color:'rgba(200,60,60,', dash:[5,4]},
-  // Consumers II 좌상단 — 파란, Citrus/Berry 구역, 세로로 길쭉
+  // Consumers I — 빨간 돔형, 논문 Figure 5: PE 15~22%, TDS 0.82~1.25%
+  {label:'Consumers I', cx:18.5, cy:1.03, rx:3.5, ry:0.22, color:'rgba(200,60,60,', dash:[5,4]},
+  // Consumers II 좌상단 — 파란, Citrus/Berry 구역
   {label:'Consumers II',cx:15.5, cy:1.17, rx:1.5, ry:0.115,color:'rgba(50,100,200,', dash:[5,4]},
-  // Consumers II 우측 — 파란, Earthy/Roasted 구역, 가로로도 넓음
-  {label:'Consumers II',cx:24.0, cy:1.19, rx:2.0, ry:0.095,color:'rgba(50,100,200,', dash:[5,4]},
+  // Consumers II 우측 — 파란, Earthy/Roasted 구역
+  {label:'Consumers II',cx:24.0, cy:1.19, rx:2.0, ry:0.115,color:'rgba(50,100,200,', dash:[5,4]},
 ];
 
 function buildUCD(s){
@@ -938,12 +938,12 @@ function buildUCD(s){
 
   // ── 소비자 타원 ──
   const ELLIPSES=[
-    // Consumers I — 빨간 돔형, PE 15~22%, TDS 0.82~1.25%
-    {cx:18.5,cy:0.97,rx:3.5,ryV:0.19,  color:'rgba(200,60,60,0.80)',  dash:[5,4]},
-    // Consumers II 좌상단 — PE 14~17%, TDS 1.05~1.28%
+    // Consumers I — PE 15~22%, TDS 0.82~1.25%
+    {cx:18.5,cy:1.03,rx:3.5,ryV:0.22,  color:'rgba(200,60,60,0.80)',  dash:[5,4]},
+    // Consumers II 좌상단
     {cx:15.5,cy:1.17,rx:1.5,ryV:0.115, color:'rgba(20,100,50,0.80)',  dash:[5,4]},
-    // Consumers II 우측 — PE 22~26%, TDS 1.10~1.28%
-    {cx:24.0,cy:1.19,rx:2.0,ryV:0.095, color:'rgba(30,60,200,0.80)',  dash:[5,4]},
+    // Consumers II 우측
+    {cx:24.0,cy:1.19,rx:2.0,ryV:0.115, color:'rgba(30,60,200,0.80)',  dash:[5,4]},
   ];
   ELLIPSES.forEach(el=>{
     ctx.strokeStyle=el.color;
@@ -994,10 +994,10 @@ function buildUCD(s){
   // ── 소비자 라벨 — 타원 중심, 선명하게 ──
   ctx.textAlign='center';
 
-  // Consumers I — 중심 (cx:18.5, cy:0.97)
+  // Consumers I — 중심 (cx:18.5, cy:1.03)
   ctx.font=`700 9px 'Noto Sans KR',sans-serif`;
   ctx.fillStyle='rgba(180,30,30,1.0)';
-  ctx.fillText('Consumers I', px(18.5), py(0.97)+3);
+  ctx.fillText('Consumers I', px(18.5), py(1.03)+3);
 
   // Consumers II 좌상단 — 중심 (cx:15.5, cy:1.17)
   ctx.font=`700 9px 'Noto Sans KR',sans-serif`;
@@ -1349,7 +1349,7 @@ function buildDiffNote(s){
   }
 
   const ext=s.ext||0, tds=s.tRaw||0;
-  const inC1  = (ext>=15&&ext<=22) && (tds>=0.82&&tds<=1.25);  // Consumers I 돔
+  const inC1  = (ext>=15&&ext<=22) && (tds>=0.82&&tds<=1.25);  // Consumers I: PE 15~22%, TDS 0.82~1.25%
   const inC2a = (ext>=14&&ext<=17) && (tds>=1.05&&tds<=1.28);  // Consumers II 좌상단
   const inC2b = (ext>=22&&ext<=26) && (tds>=1.10&&tds<=1.28);  // Consumers II 우측
   let consumerNote='';
