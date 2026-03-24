@@ -795,7 +795,7 @@ const FLAVOR_WORDS=[
 //   우측:   PE~23~25%, TDS~1.15~1.25% (Earthy/Roasted/Black Tea 구역)
 const CONSUMER_ELLIPSES=[
   // Consumers I — 빨간 돔형, 논문 Figure 5: PE 15~22%, TDS 0.82~1.25%
-  {label:'Consumers I', cx:18.5, cy:1.03, rx:3.5, ry:0.22, color:'rgba(200,60,60,', dash:[5,4]},
+  {label:'Consumers I', cx:18.5, cy:0.97, rx:3.5, ry:0.18, color:'rgba(200,60,60,', dash:[5,4]},
   // Consumers II 좌상단 — 파란, Citrus/Berry 구역
   {label:'Consumers II',cx:15.5, cy:1.17, rx:1.5, ry:0.115,color:'rgba(50,100,200,', dash:[5,4]},
   // Consumers II 우측 — 파란, Earthy/Roasted 구역
@@ -939,7 +939,7 @@ function buildUCD(s){
   // ── 소비자 타원 ──
   const ELLIPSES=[
     // Consumers I — PE 15~22%, TDS 0.82~1.25%
-    {cx:18.5,cy:1.03,rx:3.5,ryV:0.22,  color:'rgba(200,60,60,0.80)',  dash:[5,4]},
+    {cx:18.5,cy:0.97,rx:3.5,ryV:0.18,  color:'rgba(200,60,60,0.80)',  dash:[5,4]},
     // Consumers II 좌상단
     {cx:15.5,cy:1.17,rx:1.5,ryV:0.115, color:'rgba(20,100,50,0.80)',  dash:[5,4]},
     // Consumers II 우측
@@ -997,7 +997,7 @@ function buildUCD(s){
   // Consumers I — 중심 (cx:18.5, cy:1.03)
   ctx.font=`700 9px 'Noto Sans KR',sans-serif`;
   ctx.fillStyle='rgba(180,30,30,1.0)';
-  ctx.fillText('Consumers I', px(18.5), py(1.03)+3);
+  ctx.fillText('Consumers I', px(18.5), py(0.97)+3);
 
   // Consumers II 좌상단 — 중심 (cx:15.5, cy:1.17)
   ctx.font=`700 9px 'Noto Sans KR',sans-serif`;
