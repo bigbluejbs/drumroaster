@@ -64,7 +64,8 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
 .b-sour{background:#fbeaf0;color:#8a2050;}  .b-thick{background:#fdeede;color:#8a4a10;}
 .b-thin{background:#e8f0fb;color:#2a5a9a;}  .b-sweet{background:#f3eafc;color:#6a2a9a;}
 .b-tea{background:#e2f5e8;color:#1a6a3a;}   .b-classic{background:#eaf3de;color:#2d5a1f;}
-.ext-val{font-size:0.72rem;color:var(--mid);}
+.target-btn{font-size:0.72rem;font-weight:500;padding:0.35rem 0.75rem;border-radius:20px;border:1.5px solid;cursor:pointer;font-family:inherit;transition:all 0.15s;background:transparent;}
+.target-btn.active{font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.12);}
 
 /* Two-column chart layout */
 .compare-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
@@ -135,6 +136,7 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
   </div>
 </div>
 
+
 <!-- STEP 2: TDS 입력 -->
 <div class="input-section">
   <div class="step-label">
@@ -194,6 +196,31 @@ body{background:var(--bg);font-family:'Noto Sans KR',sans-serif;font-weight:300;
     <div class="col-header">
       <span class="col-title">UC Davis 2025</span>
       <span class="col-sub">UC Davis Coffee Center (최신)</span>
+    </div>
+    <!-- 타겟 소비자 선택 — UC Davis 전용 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;
+      padding:0.6rem 0.8rem;margin-bottom:0.6rem;">
+      <div style="font-size:0.63rem;font-weight:600;color:var(--muted);text-transform:uppercase;
+        letter-spacing:0.05em;margin-bottom:0.4rem;">UC Davis — 타겟 소비자</div>
+      <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+        <button class="target-btn active" data-target="general"
+          style="background:rgba(200,50,50,0.12);border-color:rgba(200,50,50,0.4);color:#902020;">
+          일반 소비자 <span style="font-weight:400;font-size:0.62rem;">(57%)</span>
+        </button>
+        <button class="target-btn" data-target="acidic"
+          style="background:rgba(20,140,60,0.08);border-color:rgba(20,140,60,0.35);color:#0a6020;">
+          산미파 <span style="font-weight:400;font-size:0.62rem;">(Consumers II)</span>
+        </button>
+        <button class="target-btn" data-target="dark"
+          style="background:rgba(30,60,200,0.08);border-color:rgba(30,60,200,0.35);color:#1030a0;">
+          다크파 <span style="font-weight:400;font-size:0.62rem;">(Consumers II)</span>
+        </button>
+        <button class="target-btn" data-target="neutral"
+          style="background:rgba(180,140,10,0.08);border-color:rgba(180,140,10,0.35);color:#806000;">
+          중립
+        </button>
+      </div>
+      <div id="target-desc" style="font-size:0.68rem;color:var(--mid);margin-top:0.35rem;line-height:1.55;"></div>
     </div>
     <div class="chart-card">
       <div class="card-title">Flavor Zone · Brew Ratio</div>
@@ -409,6 +436,58 @@ function calcTarget(Rbrew, RABS, peMin, peMax, tdsMin, tdsMax){
 let scaChart=null;
 const font="'Noto Sans KR',sans-serif";
 
+// ── 타겟 소비자 상태 ──
+let currentTarget = 'general';
+const TARGET_META = {
+  general: {
+    label: '일반 소비자',
+    color: '#902020',
+    desc: '쓴맛과 강한 산미를 기피합니다. 달콤하고 부드러운 구간(PE 15~21%, TDS 0.85~1.10%)을 선호해요. SCA Ideal보다 묽고 낮은 농도가 최적입니다.',
+    // 목표: Consumers I 중심
+    targetPE: 18.5, targetTDS: 0.97,
+    idealPeMin:15, idealPeMax:21, idealTdsMin:0.85, idealTdsMax:1.10,
+  },
+  acidic: {
+    label: '산미파 (Consumers II)',
+    color: '#0a6020',
+    desc: 'Citrus·Berry 풍미를 선호합니다. 높은 농도 + 낮은 수율 구간(PE 14~17%, TDS 1.10~1.28%)이 최적이에요. 미추출보다 과소추출을 의도적으로 활용합니다.',
+    targetPE: 15.5, targetTDS: 1.17,
+    idealPeMin:14, idealPeMax:17, idealTdsMin:1.10, idealTdsMax:1.28,
+  },
+  dark: {
+    label: '다크파 (Consumers II)',
+    color: '#1030a0',
+    desc: 'Roasted·Earthy 풍미를 선호합니다. 높은 수율 + 중간 농도 구간(PE 22~26%, TDS 1.10~1.28%)이 최적이에요. 과추출을 의도적으로 활용합니다.',
+    targetPE: 24.0, targetTDS: 1.19,
+    idealPeMin:22, idealPeMax:26, idealTdsMin:1.10, idealTdsMax:1.28,
+  },
+  neutral: {
+    label: '중립 (Classic Standard)',
+    color: '#806000',
+    desc: '특정 소비자군보다 두 기준의 공통 이상 구간을 목표로 합니다. UC Davis Classic Standard(PE 18~22%, TDS 1.15~1.35%)가 기준이에요.',
+    targetPE: 20, targetTDS: 1.25,
+    idealPeMin:18, idealPeMax:22, idealTdsMin:1.15, idealTdsMax:1.35,
+  },
+};
+
+function setTarget(t){
+  currentTarget = t;
+  document.querySelectorAll('.target-btn').forEach(btn=>{
+    btn.classList.toggle('active', btn.dataset.target === t);
+  });
+  const tm = TARGET_META[t];
+  document.getElementById('target-desc').innerHTML =
+    `<span style="color:${tm.color};font-weight:500;">${tm.label}</span> — ${tm.desc}`;
+  render();
+}
+
+// 타겟 버튼 이벤트
+document.querySelectorAll('.target-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>setTarget(btn.dataset.target));
+});
+// 초기 설명 표시
+setTarget('general');
+
 function getState(){
   const dose  = parseFloat(document.getElementById('dose').value)||15;
   const water = parseFloat(document.getElementById('water').value)||250;
@@ -468,46 +547,37 @@ function getState(){
   const scaZ = (hT && ext !== null && !peOutOfRange) ? scaClassify(tRaw, ext) : null;
   const ucdZ = (hT && ext !== null && !peOutOfRange) ? ucdClassify(tRaw, ext) : null;
 
-  // ── 이상 구간 중심 Rbrew 계산 ──
-  // SCA Ideal 중심: PE=20%, TDS=1.30 → Rbrew = PE/(TDS/(1-TDS)) + 2.1
-  const scaIdealRbrew = (20/100)/((1.30/100)/(1-1.30/100)) + 2.1;
-  // UCD Classic 중심: PE=20%, TDS=1.25
-  const ucdIdealRbrew = (20/100)/((1.25/100)/(1-1.25/100)) + 2.1;
+  // ── 타겟 기반 이상값 ──
+  const tm = TARGET_META[currentTarget];
+  const scaIdealRbrew = (20/100)/((1.30/100)/(1-1.30/100)) + 2.1;  // SCA 고정
+  const ucdIdealRbrew = (tm.targetPE/100)/((tm.targetTDS/100)/(1-tm.targetTDS/100)) + 2.1;
 
   // ── 시나리오 1: 물량 조정 (원두 고정) ──
-  const scaWaterAdj  = Math.round(scaIdealRbrew * dose);
-  const ucdWaterAdj  = Math.round(ucdIdealRbrew * dose);
+  const scaWaterAdj = Math.round(scaIdealRbrew * dose);
+  const ucdWaterAdj = Math.round(ucdIdealRbrew * dose);
 
   // ── 시나리오 2: 원두량 조정 (물량 고정) ──
-  const scaDoseAdj   = +(water / scaIdealRbrew).toFixed(1);
-  const ucdDoseAdj   = +(water / ucdIdealRbrew).toFixed(1);
+  const scaDoseAdj = +(water / scaIdealRbrew).toFixed(1);
+  const ucdDoseAdj = +(water / ucdIdealRbrew).toFixed(1);
 
-  // ── 시나리오 3: 동시 조정 (현재 비율 유지, 원두↑ → 물도 같이↑) ──
-  // 비율 유지 = Rbrew 동일, TDS를 이상 중심으로 맞춤
-  // 현재 TDS로 PE=20% 달성하려면 → Rbrew 변경 필요
-  // 대신 비율 유지하면서 "원두를 늘려 동일 비율에서 TDS를 올리는" 것
-  // TDS_ideal = 1.30(SCA)/1.25(UCD) → 같은 비율선에서 그 TDS가 나오려면?
-  // 불가: 비율선은 Rbrew 고정이므로 TDS는 PE에 따라 결정됨
-  // 따라서 동시조정 = "이상 TDS를 목표로 원두 늘리고, 비율 유지하도록 물도 늘리기"
-  // dose_new = dose * (1.30/tRaw) [SCA], water_new = Rbrew * dose_new
-  const scaDoseSimul = hT && tRaw ? +(dose * (1.30/tRaw)).toFixed(1) : dose;
-  const scaWaterSimul= Math.round(Rbrew * scaDoseSimul);
-  const ucdDoseSimul = hT && tRaw ? +(dose * (1.25/tRaw)).toFixed(1) : dose;
-  const ucdWaterSimul= Math.round(Rbrew * ucdDoseSimul);
+  // ── 시나리오 3: 동시 조정 (비율 유지, 목표 TDS로 원두+물 스케일) ──
+  const scaDoseSimul  = hT && tRaw ? +(dose * (1.30/tRaw)).toFixed(1) : dose;
+  const scaWaterSimul = Math.round(Rbrew * scaDoseSimul);
+  const ucdDoseSimul  = hT && tRaw ? +(dose * (tm.targetTDS/tRaw)).toFixed(1) : dose;
+  const ucdWaterSimul = Math.round(Rbrew * ucdDoseSimul);
 
-  // ── 각 시나리오별 예상 수율 계산 (현재 TDS 기준) ──
+  // ── 예상 수율 계산 ──
   const predPE = (Rb, td) => isFinite(Rb) && Rb > RABS && td
     ? (td/100)/(1-td/100) * (Rb - RABS) * 100 : null;
 
-  const scaPredExt       = hT ? predPE(scaIdealRbrew, tRaw) : null;   // 물량 조정
-  const ucdPredExt       = hT ? predPE(ucdIdealRbrew, tRaw) : null;
-  const scaDosePredExt   = hT ? predPE(water/scaDoseAdj, tRaw) : null; // 원두 조정
-  const ucdDosePredExt   = hT ? predPE(water/ucdDoseAdj, tRaw) : null;
-  // 동시조정: 비율 유지이므로 PE는 현재와 동일, TDS만 변화 → 차트상 y축만 이동
-  const scaSimulTDS      = hT ? 1.30 : null;  // 목표 TDS로 이동
-  const ucdSimulTDS      = hT ? 1.25 : null;
-  const scaSimulExt      = hT ? predPE(Rbrew, scaSimulTDS) : null;
-  const ucdSimulExt      = hT ? predPE(Rbrew, ucdSimulTDS) : null;
+  const scaPredExt     = hT ? predPE(scaIdealRbrew, tRaw) : null;
+  const ucdPredExt     = hT ? predPE(ucdIdealRbrew, tRaw) : null;
+  const scaDosePredExt = hT ? predPE(water/scaDoseAdj, tRaw) : null;
+  const ucdDosePredExt = hT ? predPE(water/ucdDoseAdj, tRaw) : null;
+  const scaSimulTDS    = hT ? 1.30 : null;
+  const ucdSimulTDS    = hT ? tm.targetTDS : null;
+  const scaSimulExt    = hT ? predPE(Rbrew, scaSimulTDS) : null;
+  const ucdSimulExt    = hT ? predPE(Rbrew, ucdSimulTDS) : null;
 
   return {
     dose, water, bVol, tRaw: hT ? tRaw : null,
@@ -991,25 +1061,26 @@ function buildUCD(s){
   });
   ctx.globalAlpha=1;
 
-  // ── 소비자 라벨 — 타원 중심, 선명하게 ──
+  // ── 소비자 라벨 강조 — 현재 타겟 타원 테두리 두껍게 ──
   ctx.textAlign='center';
+  const targetHighlight = {
+    general: 0, acidic: 1, dark: 2, neutral: -1
+  }[currentTarget];
 
-  // Consumers I — 중심 (cx:18.5, cy:1.03)
   ctx.font=`700 9px 'Noto Sans KR',sans-serif`;
-  ctx.fillStyle='rgba(180,30,30,1.0)';
-  ctx.fillText('Consumers I', px(18.5), py(0.97)+3);
+  [[18.5,0.97,'rgba(180,30,30,1.0)','Consumers I'],
+   [15.5,1.17,'rgba(20,60,180,1.0)','Consumers II'],
+   [24.0,1.19,'rgba(20,60,180,1.0)','Consumers II']
+  ].forEach(([cx,cy,col,lbl],i)=>{
+    const isActive = i === targetHighlight;
+    ctx.fillStyle = isActive ? col : col.replace('1.0','0.5');
+    ctx.font = `${isActive?'700':'500'} ${isActive?10:8}px 'Noto Sans KR',sans-serif`;
+    ctx.fillText(lbl, px(cx), py(cy)+3);
+  });
 
-  // Consumers II 좌상단 — 중심 (cx:15.5, cy:1.17)
-  ctx.font=`700 9px 'Noto Sans KR',sans-serif`;
-  ctx.fillStyle='rgba(20,60,180,1.0)';
-  ctx.fillText('Consumers II', px(15.5), py(1.17)+3);
-
-  // Consumers II 우측 — 중심 (cx:24.0, cy:1.19)
-  ctx.fillStyle='rgba(20,60,180,1.0)';
-  ctx.fillText('Consumers II', px(24.0), py(1.19)+3);
-
-  // ── 레시피 기준점: 비율선이 UCD Classic Standard(PE 18~22%, TDS 1.15~1.35%)와 교차하는 중간점 ──
-  const ucdTarget = calcTarget(s.Rbrew, s.RABS, 18, 22, 1.15, 1.35);
+  // ── 레시피 기준점: 타겟 기반 이상 구간과 비율선 교차점 ──
+  const tm = TARGET_META[currentTarget];
+  const ucdTarget = calcTarget(s.Rbrew, s.RABS, tm.idealPeMin, tm.idealPeMax, tm.idealTdsMin, tm.idealTdsMax);
   const UCD_TARGET_EXT = ucdTarget.ext;
   const UCD_TARGET_TDS = ucdTarget.tds;
 
@@ -1039,11 +1110,12 @@ function buildUCD(s){
     }
   }
 
-  // ── 레시피 기준점 (교차 있으면 노란, 없으면 회색) ──
+  // ── 레시피 기준점 (타겟 색상) ──
   if(UCD_TARGET_TDS >= YMIN && UCD_TARGET_TDS <= YMAX){
+    const dotColor = ucdTarget.inIdeal ? tm.color : '#aaaaaa';
     ctx.beginPath();
     ctx.arc(px(UCD_TARGET_EXT), py(UCD_TARGET_TDS), 7, 0, Math.PI*2);
-    ctx.fillStyle = ucdTarget.inIdeal ? '#d4a017' : '#aaaaaa';
+    ctx.fillStyle = dotColor;
     ctx.fill();
     ctx.strokeStyle='#fff'; ctx.lineWidth=2.5; ctx.stroke();
 
@@ -1054,7 +1126,7 @@ function buildUCD(s){
       ctx.font=`500 7.5px 'Noto Sans KR',sans-serif`;
       ctx.fillStyle='rgba(90,90,90,0.90)';
       ctx.fillText('⚠ 현재 비율로는', px(UCD_TARGET_EXT), py(UCD_TARGET_TDS)-13);
-      ctx.fillText('이상 구간 진입 불가', px(UCD_TARGET_EXT), py(UCD_TARGET_TDS)-4);
+      ctx.fillText('목표 구간 진입 불가', px(UCD_TARGET_EXT), py(UCD_TARGET_TDS)-4);
       ctx.restore();
     }
   }
@@ -1250,58 +1322,92 @@ function buildFeedback(s){
     </div>
     <div class="fb-note"><strong>전략</strong>  ${sm.note}</div>`;
 
-  let flavorNote='';
-  if(s.hT){
-    const nearby=FLAVOR_WORDS.filter(fw=>{
-      const dx=s.ext-fw.ex, dy=(s.tRaw-fw.td)*10;
-      return Math.sqrt(dx*dx+dy*dy)<2.5;
-    }).map(fw=>fw.t).slice(0,3);
-    if(nearby.length>0) flavorNote=`<span style="color:#8a5020;font-weight:500;">${nearby.join(' · ')}</span>`;
+  // ── UCD 피드백: 타겟 기반 완전 재작성 ──
+  const tm = TARGET_META[currentTarget];
+  const ucdTargetCheck = calcTarget(s.Rbrew, s.RABS, tm.idealPeMin, tm.idealPeMax, tm.idealTdsMin, tm.idealTdsMax);
+  const ucdRatioMissTarget = !ucdTargetCheck.inIdeal;
+
+  // 현재 위치 평가
+  const inTargetZone = s.hT && s.ext >= tm.idealPeMin && s.ext <= tm.idealPeMax
+                    && s.tRaw >= tm.idealTdsMin && s.tRaw <= tm.idealTdsMax;
+
+  // 타겟별 현재 위치 분석
+  let positionText = '';
+  let adjustText = '';
+
+  if(!s.hT){
+    positionText = 'TDS를 입력하면 타겟 소비자 기준 분석이 시작됩니다.';
+  } else {
+    const peDir = s.ext < tm.idealPeMin ? '낮음 (미추출)' : s.ext > tm.idealPeMax ? '높음 (과추출)' : '적정';
+    const tdsDir = s.tRaw < tm.idealTdsMin ? '낮음 (묽음)' : s.tRaw > tm.idealTdsMax ? '높음 (진함)' : '적정';
+
+    if(inTargetZone){
+      positionText = `✓ <strong style="color:${tm.color};">${tm.label}</strong> 선호 구간 안에 있습니다.`;
+      adjustText = '현재 레시피를 유지하세요.';
+    } else {
+      const peAdj = s.ext < tm.idealPeMin
+        ? '수율을 높이세요 → 분쇄 곱게 또는 물량 늘리기'
+        : s.ext > tm.idealPeMax
+        ? '수율을 낮추세요 → 분쇄 굵게 또는 물량 줄이기'
+        : '수율 적정';
+      const tdsAdj = s.tRaw < tm.idealTdsMin
+        ? '농도를 높이세요 → 원두 늘리기 또는 물량 줄이기'
+        : s.tRaw > tm.idealTdsMax
+        ? '농도를 낮추세요 → 원두 줄이기 또는 물량 늘리기'
+        : '농도 적정';
+
+      positionText = `현재 위치: 수율 ${peDir} · 농도 ${tdsDir}`;
+      adjustText = [peAdj, tdsAdj].filter(x=>!x.includes('적정')).join('<br>');
+    }
   }
+
+  // 타겟 구간 안내
+  const targetZoneInfo = {
+    general: `PE ${tm.idealPeMin}~${tm.idealPeMax}%, TDS ${tm.idealTdsMin}~${tm.idealTdsMax}% — Sweet/Balanced 구역<br>
+      <span style="font-size:0.68rem;color:var(--muted);">※ SCA Ideal보다 묽고 낮은 농도. 쓴맛·산미 모두 기피하는 일반 소비자 최적.</span>`,
+    acidic: `PE ${tm.idealPeMin}~${tm.idealPeMax}%, TDS ${tm.idealTdsMin}~${tm.idealTdsMax}% — Sour/Citrus 구역<br>
+      <span style="font-size:0.68rem;color:var(--muted);">※ 의도적 미추출. Citrus·Berry 풍미 극대화. 밝은 산미를 즐기는 스페셜티 소비자 최적.</span>`,
+    dark: `PE ${tm.idealPeMin}~${tm.idealPeMax}%, TDS ${tm.idealTdsMin}~${tm.idealTdsMax}% — Roasted/Earthy 구역<br>
+      <span style="font-size:0.68rem;color:var(--muted);">※ 의도적 과추출. Roasted·Earthy 풍미 극대화. 다크 로스티를 즐기는 스페셜티 소비자 최적.</span>`,
+    neutral: `PE ${tm.idealPeMin}~${tm.idealPeMax}%, TDS ${tm.idealTdsMin}~${tm.idealTdsMax}% — Classic Standard<br>
+      <span style="font-size:0.68rem;color:var(--muted);">※ UC Davis Classic Standard. 두 소비자군의 중간 타협점. 특정 선호 소비자 최적화에는 한계 있음.</span>`,
+  }[currentTarget];
+
   document.getElementById('ucd-fb').innerHTML=`
-    <div style="grid-column:1/-1;font-size:0.73rem;color:var(--mid);line-height:1.6;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
-      <strong style="color:var(--text);">현재 위치</strong>  ${um.note}
-      ${flavorNote?`<span style="font-size:0.65rem;color:var(--muted);"> — 플레이버: </span>${flavorNote}`:''}
-      <span style="display:flex;align-items:center;gap:0.4rem;margin-top:0.3rem;flex-wrap:wrap;">
-        <span style="font-size:0.67rem;color:var(--mid);">레시피 시뮬레이션:</span>
+    <div style="grid-column:1/-1;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
+      <div style="font-size:0.7rem;font-weight:600;color:${tm.color};margin-bottom:0.25rem;">
+        타겟: ${tm.label}
+      </div>
+      <div style="font-size:0.7rem;color:var(--mid);line-height:1.6;">
+        ${targetZoneInfo}
+      </div>
+    </div>
+    <div style="grid-column:1/-1;font-size:0.72rem;color:var(--mid);line-height:1.7;
+      padding:0.5rem 0.6rem;background:${inTargetZone?'rgba(40,160,40,0.06)':'rgba(200,100,20,0.05)'};
+      border-radius:6px;border-left:3px solid ${inTargetZone?'rgba(40,160,40,0.5)':tm.color+'80'};">
+      <div>${positionText}</div>
+      ${adjustText?`<div style="margin-top:0.25rem;font-weight:500;color:var(--text);">${adjustText}</div>`:''}
+    </div>
+    <div style="grid-column:1/-1;">
+      <div style="font-size:0.67rem;font-weight:500;color:var(--mid);margin-bottom:0.3rem;">레시피 시뮬레이션</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.4rem;">
         ${Math.abs(s.ucdWaterAdj-s.water)>5?`
         <button onclick="document.getElementById('water').value=${s.ucdWaterAdj};render();"
-          style="font-size:0.63rem;padding:0.18rem 0.5rem;border-radius:4px;
-            border:1px solid #2060c0;background:#eef2ff;color:#2060c0;
-            cursor:pointer;font-family:inherit;">🔵 물 ${s.ucdWaterAdj}ml</button>`:''}
+          style="font-size:0.63rem;padding:0.22rem 0.6rem;border-radius:5px;
+            border:1px solid #2060c0;background:#eef2ff;color:#2060c0;cursor:pointer;font-family:inherit;">
+          🔵 물 ${s.ucdWaterAdj}ml</button>`:''}
         ${Math.abs(s.ucdDoseAdj-s.dose)>0.5?`
         <button onclick="document.getElementById('dose').value=${s.ucdDoseAdj};render();"
-          style="font-size:0.63rem;padding:0.18rem 0.5rem;border-radius:4px;
-            border:1px solid #d06010;background:#fff3e8;color:#d06010;
-            cursor:pointer;font-family:inherit;">🟠 원두 ${s.ucdDoseAdj}g</button>`:''}
+          style="font-size:0.63rem;padding:0.22rem 0.6rem;border-radius:5px;
+            border:1px solid #d06010;background:#fff3e8;color:#d06010;cursor:pointer;font-family:inherit;">
+          🟠 원두 ${s.ucdDoseAdj}g</button>`:''}
         ${(Math.abs(s.ucdDoseSimul-s.dose)>0.5||Math.abs(s.ucdWaterSimul-s.water)>5)?`
         <button onclick="document.getElementById('dose').value=${s.ucdDoseSimul};document.getElementById('water').value=${s.ucdWaterSimul};render();"
-          style="font-size:0.63rem;padding:0.18rem 0.5rem;border-radius:4px;
-            border:1px solid #8020b0;background:#f5eeff;color:#8020b0;
-            cursor:pointer;font-family:inherit;">🟣 동시 ${s.ucdDoseSimul}g+${s.ucdWaterSimul}ml</button>`:''}
-      </span>
-    </div>
-    <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;margin-top:0.1rem;">
-      <div style="border-left:3px solid rgba(200,60,60,0.75);padding-left:0.6rem;">
-        <div style="font-size:0.6rem;font-weight:500;color:rgba(180,40,40,0.95);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">
-          Consumers I<br><span style="font-weight:400;color:rgba(180,40,40,0.7);">일반 소비자</span>
-        </div>
-        <div style="font-size:0.7rem;color:var(--mid);line-height:1.55;">${um.c1}</div>
-        <div style="font-size:0.7rem;font-weight:500;color:var(--text);margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border);">${um.c1dir}</div>
-      </div>
-      <div style="border-left:3px solid rgba(50,130,80,0.75);padding-left:0.6rem;">
-        <div style="font-size:0.6rem;font-weight:500;color:rgba(30,110,60,0.95);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">
-          Consumers II — 산미 봉우리<br><span style="font-weight:400;color:rgba(30,110,60,0.7);">안장형 곡면의 좌상단 피크</span>
-        </div>
-        <div style="font-size:0.7rem;color:var(--mid);line-height:1.55;">${um.c2a}</div>
-        <div style="font-size:0.7rem;font-weight:500;color:var(--text);margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border);">${um.c2adir}</div>
-      </div>
-      <div style="border-left:3px solid rgba(50,80,180,0.75);padding-left:0.6rem;">
-        <div style="font-size:0.6rem;font-weight:500;color:rgba(40,60,170,0.95);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.3rem;">
-          Consumers II — 다크 봉우리<br><span style="font-weight:400;color:rgba(40,60,170,0.7);">안장형 곡면의 우측 피크</span>
-        </div>
-        <div style="font-size:0.7rem;color:var(--mid);line-height:1.55;">${um.c2b}</div>
-        <div style="font-size:0.7rem;font-weight:500;color:var(--text);margin-top:0.3rem;padding-top:0.3rem;border-top:1px solid var(--border);">${um.c2bdir}</div>
+          style="font-size:0.63rem;padding:0.22rem 0.6rem;border-radius:5px;
+            border:1px solid #8020b0;background:#f5eeff;color:#8020b0;cursor:pointer;font-family:inherit;">
+          🟣 동시 ${s.ucdDoseSimul}g+${s.ucdWaterSimul}ml</button>`:''}
+        ${(!s.ucdWaterAdj||Math.abs(s.ucdWaterAdj-s.water)<=5)&&(!s.ucdDoseAdj||Math.abs(s.ucdDoseAdj-s.dose)<=0.5)&&inTargetZone?
+          `<span style="font-size:0.65rem;color:rgba(40,140,40,0.9);">✓ 현재 레시피가 이미 타겟 구간입니다</span>`:''}
       </div>
     </div>`;
 }
